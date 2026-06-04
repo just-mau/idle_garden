@@ -44,13 +44,17 @@ CROPS = {
         "seed_price": 3,
         "sell_price": 2,
         "symbol": "Y",
+        "growth_stage_1": 15,
+        "growth_stage_2": 15,
     },
     "rye": {
         "name": "Roggen",
         "seed_name": "Roggensaat",
         "seed_price": 8,
-        "sell_price": 5,
+        "sell_price": 4,
         "symbol": "R",
+        "growth_stage_1": 30,
+        "growth_stage_2": 30,
         "unlock_crop": "wheat",
         "unlock_amount": 25,
     },
@@ -273,10 +277,9 @@ def build_garden_lines():
     ])
 
     if shop_unlocked:
-        shop_action = "Fokus verlassen" if shop_open else "bedienen"
-        lines.append(f"[u] Upgrade-Shop {shop_action}")
+        lines.append("[u] Upgrade-Shop")
 
-    lines.append("[q] Beenden")
+    lines.append("[q] Speichern und Beenden")
 
     return lines
 
@@ -665,10 +668,12 @@ def find_ready_fields():
 # ============================================================
 
 def create_plant(crop_id):
+    crop = get_crop(crop_id)
+
     return {
         "crop": crop_id,
         "stage": ",",
-        "next_growth": time.time() + random.randint(3, 8),
+        "next_growth": time.time() + crop["growth_stage_1"],
     }
 
 
@@ -699,9 +704,11 @@ def grow_plants():
             if now < plant["next_growth"]:
                 continue
 
+            crop = get_crop(plant["crop"])
+
             if plant["stage"] == ",":
                 plant["stage"] = "i"
-                plant["next_growth"] = now + random.randint(4, 10)
+                plant["next_growth"] = now + crop["growth_stage_2"]
             elif plant["stage"] == "i":
                 plant["stage"] = "Y"
 
