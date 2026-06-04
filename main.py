@@ -8,6 +8,8 @@ import tty
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
 RESET = "\033[0m"
+SEED_PRICE = 3
+BONUS_HARVEST_CHANCE = 0.1
 
 garden = [
     [None, None, None, None, None],
@@ -44,6 +46,7 @@ def draw_garden():
     print()
     print("[p] Samen pflanzen")
     print("[h] Ernten")
+    print(f"[b] Samen kaufen ({SEED_PRICE} Gold)")
     print("[q] Beenden")
     print()
     print("> ", end="", flush=True)
@@ -75,6 +78,17 @@ def plant_seed():
     garden[row][col] = create_plant()
     seeds -= 1
 
+
+def buy_seed():
+    global gold, seeds
+
+    if gold < SEED_PRICE:
+        return
+
+    gold -= SEED_PRICE
+    seeds += 1
+
+
 def grow_plants():
     now = time.time()
 
@@ -91,6 +105,21 @@ def grow_plants():
                     plant["stage"] = "Y"
 
 
+def calculate_harvest_reward():
+    gold_reward = 1
+    seed_reward = 1
+
+    if random.random() < BONUS_HARVEST_CHANCE:
+        bonus_type = random.choice(["gold", "seeds"])
+
+        if bonus_type == "gold":
+            gold_reward += 1
+        else:
+            seed_reward += 1
+
+    return gold_reward, seed_reward
+
+
 def harvest():
     global gold, seeds
 
@@ -98,8 +127,9 @@ def harvest():
         for col_index, cell in enumerate(row):
             if cell is not None and cell["stage"] == "Y":
                 garden[row_index][col_index] = None
-                gold += 1
-                seeds += 1
+                gold_reward, seed_reward = calculate_harvest_reward()
+                gold += gold_reward
+                seeds += seed_reward
 
 
 def read_command(timeout=0.25):
@@ -116,6 +146,8 @@ def handle_command(command):
         plant_seed()
     elif command == "h":
         harvest()
+    elif command == "b":
+        buy_seed()
     elif command == "q":
         return False
 
