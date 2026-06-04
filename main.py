@@ -29,6 +29,11 @@ HARVEST_HELPER_INTERVAL = 5
 MIN_UPGRADE_INTERVAL = 1
 MAX_UPGRADE_ACTIONS = 5
 
+GARDEN_SIZE = 5
+MAX_GARDENS = 9
+GARDENS_PER_ROW = 3
+GARDEN_PANEL_WIDTH = 13
+
 SHOP_PANEL_WIDTH = 46
 SELL_AMOUNTS = [1, 5, 10, "all"]
 
@@ -122,16 +127,21 @@ def cycle_active_crop():
 
 
 # ============================================================
-# GAME STATE
+# GAME STATE: GARDENS
 # ============================================================
 
-garden = [
-    [None, None, None, None, None],
-    [None, None, None, None, None],
-    [None, None, None, None, None],
-    [None, None, None, None, None],
-    [None, None, None, None, None],
+def create_empty_garden():
+    return [
+        [None for _ in range(GARDEN_SIZE)]
+        for _ in range(GARDEN_SIZE)
+    ]
+
+
+gardens = [
+    create_empty_garden()
 ]
+
+active_garden = 0
 
 seed_shop_open = False
 selected_seed = 0
@@ -195,6 +205,39 @@ def box_line(content=""):
 
 
 # ============================================================
+# GARDEN ECONOMY
+# ============================================================
+
+def get_new_garden_price():
+    return 100 * len(gardens)
+
+
+def can_buy_new_garden():
+    return len(gardens) < MAX_GARDENS and gold >= get_new_garden_price()
+
+
+def buy_new_garden():
+    global gold
+
+    if len(gardens) >= MAX_GARDENS:
+        return
+
+    price = get_new_garden_price()
+
+    if gold < price:
+        return
+
+    gold -= price
+    gardens.append(create_empty_garden())
+
+
+def cycle_active_garden():
+    global active_garden
+
+    active_garden = (active_garden + 1) % len(gardens)
+
+
+# ============================================================
 # DISPLAY: GARDEN
 # ============================================================
 
@@ -231,21 +274,77 @@ def format_unlock_hint():
     return f"Nächstes Saatgut: {crop['name']} bei {current}/{required_amount} geerntetem {required_name}"
 
 
-def format_garden_row(row):
-    cells = []
+def format_cell(cell):
+    if cell is None:
+        return "."
 
-    for cell in row:
-        if cell is None:
-            cells.append(".")
-        elif cell["stage"] == ",":
-            cells.append(",")
-        elif cell["stage"] == "i":
-            cells.append(GREEN + "i" + RESET)
-        elif cell["stage"] == "Y":
-            crop = get_crop(cell["crop"])
-            cells.append(YELLOW + crop["symbol"] + RESET)
+    if cell["stage"] == ",":
+        return ","
 
-    return " ".join(cells)
+    if cell["stage"] == "i":
+        return GREEN + "i" + RESET
+
+    if cell["stage"] == "Y":
+        crop = get_crop(cell["crop"])
+        return YELLOW + crop["symbol"] + RESET
+
+    return "?"
+
+
+def format_garden_header(garden_index):
+    label = f"Feld {garden_index + 1}"
+
+    if garden_index == active_garden:
+        label = "> " + label
+        return CYAN + pad_visible(label, GARDEN_PANEL_WIDTH) + RESET
+
+    return pad_visible("  " + label, GARDEN_PANEL_WIDTH)
+
+
+def format_garden_row(garden_index, row_index):
+    row = gardens[garden_index][row_index]
+    cells = [format_cell(cell) for cell in row]
+    return pad_visible(" ".join(cells), GARDEN_PANEL_WIDTH)
+
+
+def build_garden_grid_lines():
+    lines = []
+
+    for block_start in range(0, len(gardens), GARDENS_PER_ROW):
+        block_indices = list(range(block_start, min(block_start + GARDENS_PER_ROW, len(gardens))))
+
+        header_parts = [
+            format_garden_header(garden_index)
+            for garden_index in block_indices
+        ]
+        lines.append(" ~~ ".join(header_parts))
+
+        for row_index in range(GARDEN_SIZE):
+            row_parts = [
+                format_garden_row(garden_index, row_index)
+                for garden_index in block_indices
+            ]
+            lines.append(" ~~ ".join(row_parts))
+
+        lines.append("")
+
+    if lines and lines[-1] == "":
+        lines.pop()
+
+    return lines
+
+
+def format_new_garden_line():
+    if len(gardens) >= MAX_GARDENS:
+        return f"[n] Neues Feld kaufen: Maximum erreicht ({MAX_GARDENS})"
+
+    price = get_new_garden_price()
+
+    if gold < price:
+        missing = price - gold
+        return f"[n] Neues Feld kaufen ({price} Gold, fehlt {missing})"
+
+    return f"[n] Neues Feld kaufen ({price} Gold)"
 
 
 def build_garden_lines():
@@ -255,6 +354,7 @@ def build_garden_lines():
         "=== IDLE GARDEN ===",
         format_inventory_line(),
         f"Aktives Saatgut: {crop['seed_name']}",
+        f"Aktives Feld: {active_garden + 1}/{len(gardens)}",
     ]
 
     unlock_hint = format_unlock_hint()
@@ -263,15 +363,15 @@ def build_garden_lines():
         lines.append(unlock_hint)
 
     lines.append("")
-
-    for row in garden:
-        lines.append(format_garden_row(row))
+    lines.extend(build_garden_grid_lines())
 
     lines.extend([
         "",
         f"[p] {crop['name']} pflanzen",
         "[h] Ernten",
+        "[f] Feld wechseln",
         "[c] Saatgut wechseln",
+        format_new_garden_line(),
         "[b] Saatgut-Shop",
         "[v] Verkaufsshop",
     ])
@@ -508,9 +608,9 @@ def run_automation():
 
         for _ in range(get_upgrade_action_count(upgrade)):
             if upgrade["id"] == "saat_boy":
-                plant_seed(active_crop)
+                plant_seed_anywhere(active_crop)
             elif upgrade["id"] == "harvest_helper":
-                harvest_one()
+                harvest_one_anywhere()
 
         upgrade["next_action"] = now + get_upgrade_interval(upgrade)
 
@@ -548,17 +648,17 @@ def format_upgrade_price(upgrade):
 
 def format_upgrade_description(upgrade):
     if upgrade["id"] == "harvest_all":
-        return "h erntet alle reifen Pflanzen"
+        return "h erntet alle reifen Pflanzen im aktiven Feld"
 
     interval = get_upgrade_interval(upgrade)
     action_count = get_upgrade_action_count(upgrade)
 
     if upgrade["id"] == "saat_boy":
         crop = get_crop(active_crop)
-        return f"pflanzt alle {interval}s {action_count}x {crop['name']}"
+        return f"pflanzt alle {interval}s {action_count}x {crop['name']} irgendwo"
 
     action = "Feld" if action_count == 1 else "Felder"
-    return f"erntet alle {interval}s {action_count} {action}"
+    return f"erntet alle {interval}s {action_count} {action} irgendwo"
 
 
 def build_upgrade_item_line(upgrade, is_active):
@@ -641,24 +741,42 @@ def draw_garden():
 # GARDEN: FIELD SEARCH
 # ============================================================
 
-def find_empty_fields():
+def find_empty_fields_in_garden(garden_index):
     empty_fields = []
 
-    for row_index, row in enumerate(garden):
+    for row_index, row in enumerate(gardens[garden_index]):
         for col_index, cell in enumerate(row):
             if cell is None:
-                empty_fields.append((row_index, col_index))
+                empty_fields.append((garden_index, row_index, col_index))
 
     return empty_fields
 
 
-def find_ready_fields():
+def find_empty_fields_anywhere():
+    empty_fields = []
+
+    for garden_index in range(len(gardens)):
+        empty_fields.extend(find_empty_fields_in_garden(garden_index))
+
+    return empty_fields
+
+
+def find_ready_fields_in_garden(garden_index):
     ready_fields = []
 
-    for row_index, row in enumerate(garden):
+    for row_index, row in enumerate(gardens[garden_index]):
         for col_index, cell in enumerate(row):
             if cell is not None and cell["stage"] == "Y":
-                ready_fields.append((row_index, col_index))
+                ready_fields.append((garden_index, row_index, col_index))
+
+    return ready_fields
+
+
+def find_ready_fields_anywhere():
+    ready_fields = []
+
+    for garden_index in range(len(gardens)):
+        ready_fields.extend(find_ready_fields_in_garden(garden_index))
 
     return ready_fields
 
@@ -677,40 +795,61 @@ def create_plant(crop_id):
     }
 
 
-def plant_seed(crop_id):
+def plant_seed_in_garden(crop_id, garden_index):
     seed_key = get_seed_key(crop_id)
 
     if inventory[seed_key] <= 0:
-        return
+        return False
 
-    empty_fields = find_empty_fields()
+    empty_fields = find_empty_fields_in_garden(garden_index)
 
     if not empty_fields:
-        return
+        return False
 
-    row, col = random.choice(empty_fields)
-    garden[row][col] = create_plant(crop_id)
+    selected_garden, row, col = random.choice(empty_fields)
+    gardens[selected_garden][row][col] = create_plant(crop_id)
     inventory[seed_key] -= 1
+
+    return True
+
+
+def plant_seed_anywhere(crop_id):
+    seed_key = get_seed_key(crop_id)
+
+    if inventory[seed_key] <= 0:
+        return False
+
+    empty_fields = find_empty_fields_anywhere()
+
+    if not empty_fields:
+        return False
+
+    garden_index, row, col = random.choice(empty_fields)
+    gardens[garden_index][row][col] = create_plant(crop_id)
+    inventory[seed_key] -= 1
+
+    return True
 
 
 def grow_plants():
     now = time.time()
 
-    for row in garden:
-        for plant in row:
-            if plant is None:
-                continue
+    for garden in gardens:
+        for row in garden:
+            for plant in row:
+                if plant is None:
+                    continue
 
-            if now < plant["next_growth"]:
-                continue
+                if now < plant["next_growth"]:
+                    continue
 
-            crop = get_crop(plant["crop"])
+                crop = get_crop(plant["crop"])
 
-            if plant["stage"] == ",":
-                plant["stage"] = "i"
-                plant["next_growth"] = now + crop["growth_stage_2"]
-            elif plant["stage"] == "i":
-                plant["stage"] = "Y"
+                if plant["stage"] == ",":
+                    plant["stage"] = "i"
+                    plant["next_growth"] = now + crop["growth_stage_2"]
+                elif plant["stage"] == "i":
+                    plant["stage"] = "Y"
 
 
 # ============================================================
@@ -767,8 +906,8 @@ def calculate_harvest_reward():
     return crop_reward, seed_reward
 
 
-def harvest_plant(row_index, col_index):
-    cell = garden[row_index][col_index]
+def harvest_plant(garden_index, row_index, col_index):
+    cell = gardens[garden_index][row_index][col_index]
 
     if cell is None or cell["stage"] != "Y":
         return False
@@ -776,7 +915,7 @@ def harvest_plant(row_index, col_index):
     crop_id = cell["crop"]
     crop_reward, seed_reward = calculate_harvest_reward()
 
-    garden[row_index][col_index] = None
+    gardens[garden_index][row_index][col_index] = None
 
     inventory[crop_id] += crop_reward
     inventory[get_seed_key(crop_id)] += seed_reward
@@ -785,19 +924,29 @@ def harvest_plant(row_index, col_index):
     return True
 
 
-def harvest_one():
-    ready_fields = find_ready_fields()
+def harvest_one_in_garden(garden_index):
+    ready_fields = find_ready_fields_in_garden(garden_index)
 
     if not ready_fields:
         return False
 
-    row_index, col_index = random.choice(ready_fields)
-    return harvest_plant(row_index, col_index)
+    selected_garden, row_index, col_index = random.choice(ready_fields)
+    return harvest_plant(selected_garden, row_index, col_index)
 
 
-def harvest_all():
-    for row_index, col_index in find_ready_fields():
-        harvest_plant(row_index, col_index)
+def harvest_one_anywhere():
+    ready_fields = find_ready_fields_anywhere()
+
+    if not ready_fields:
+        return False
+
+    garden_index, row_index, col_index = random.choice(ready_fields)
+    return harvest_plant(garden_index, row_index, col_index)
+
+
+def harvest_all_in_garden(garden_index):
+    for selected_garden, row_index, col_index in find_ready_fields_in_garden(garden_index):
+        harvest_plant(selected_garden, row_index, col_index)
 
 
 # ============================================================
@@ -936,12 +1085,16 @@ def handle_game_command(command):
     global seed_shop_open, sell_shop_open, shop_open
 
     if command == "p":
-        plant_seed(active_crop)
+        plant_seed_in_garden(active_crop, active_garden)
     elif command == "h":
         if harvest_all_unlocked:
-            harvest_all()
+            harvest_all_in_garden(active_garden)
         else:
-            harvest_one()
+            harvest_one_in_garden(active_garden)
+    elif command == "f":
+        cycle_active_garden()
+    elif command == "n":
+        buy_new_garden()
     elif command == "c":
         cycle_active_crop()
     elif command == "b":
