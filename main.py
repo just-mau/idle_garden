@@ -46,6 +46,7 @@ CROPS = {
         "symbol": "Y",
     }
 }
+CROP_ORDER = ["wheat"]
 
 inventory = {
     "wheat_seed": 5,
@@ -75,7 +76,8 @@ garden = [
 # ============================================================
 # UPGRADE STATE
 # ============================================================
-
+seed_shop_open = False
+selected_seed = 0
 shop_unlocked = False
 shop_open = False
 selected_upgrade = 0
@@ -167,7 +169,7 @@ def build_garden_lines():
         "",
         f"[p] {crop['name']} pflanzen",
         "[h] Ernten",
-        f"[b] {crop['seed_name']} kaufen ({crop['seed_price']} Gold)",
+        "[b] Saatgut-Shop öffnen",
         f"[v] {crop['name']} verkaufen ({crop['sell_price']} Gold)",
     ])
 
@@ -272,6 +274,49 @@ def run_automation():
 
         upgrade["next_action"] = now + get_upgrade_interval(upgrade)
 
+# ============================================================
+# CROP SHOP
+# ============================================================
+def build_seed_shop_lines():
+    border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
+    lines = [
+        border,
+        box_line("SAATGUT-SHOP"),
+        border,
+        box_line("Shop aktiv"),
+        box_line("Up/Down oder a/d: Auswahl"),
+        box_line("Enter/Space: kaufen"),
+        box_line("b: Fokus verlassen"),
+        border,
+    ]
+
+    for index, crop_id in enumerate(CROP_ORDER):
+        crop = get_crop(crop_id)
+        is_active = index == selected_seed
+
+        selector = "> " if is_active else "  "
+        name = selector + crop["seed_name"]
+
+        if is_active:
+            name = CYAN + name + RESET
+
+        price_text = f"{crop['seed_price']}g"
+
+        if gold < crop["seed_price"]:
+            missing_gold = crop["seed_price"] - gold
+            price_text = RED + f"{price_text} fehlt {missing_gold}g" + RESET
+
+        content_width = SHOP_PANEL_WIDTH - 2
+        spacer = " " * max(1, content_width - visible_length(name) - visible_length(price_text))
+
+        lines.append(box_line(name + spacer + price_text))
+        lines.append(box_line(f"  Besitz: {inventory[f'{crop_id}_seed']}"))
+        lines.append(box_line())
+
+    lines.append(border)
+
+    return lines
+
 
 # ============================================================
 # DISPLAY: UPGRADE SHOP
@@ -368,7 +413,11 @@ def build_upgrade_shop_lines():
 
 def draw_garden():
     garden_lines = build_garden_lines()
-    shop_lines = build_upgrade_shop_lines() if shop_unlocked else []
+    shop_lines = []
+    if seed_shop_open:
+        shop_lines = build_seed_shop_lines()
+    elif shop_unlocked:
+        shop_lines = build_upgrade_shop_lines()
     terminal_width = shutil.get_terminal_size((80, 24)).columns
 
     if shop_lines and terminal_width >= SHOP_PANEL_WIDTH + 34:
@@ -602,9 +651,23 @@ def handle_shop_command(command):
 
     return True
 
+def handle_seed_shop_command(command):
+    global seed_shop_open, selected_seed
+
+    if command in ("up", "left", "a"):
+        selected_seed = (selected_seed - 1) % len(CROP_ORDER)
+    elif command in ("down", "right", "d"):
+        selected_seed = (selected_seed + 1) % len(CROP_ORDER)
+    elif command in ("enter", "space"):
+        crop_id = CROP_ORDER[selected_seed]
+        buy_seed(crop_id)
+    elif command == "b":
+        seed_shop_open = False
+
+    return True
 
 def handle_game_command(command):
-    global shop_open
+    global shop_open, seed_shop_open
 
     if command == "p":
         plant_seed(ACTIVE_CROP)
@@ -614,7 +677,7 @@ def handle_game_command(command):
         else:
             harvest_one()
     elif command == "b":
-        buy_seed(ACTIVE_CROP)
+        seed_shop_open = True
     elif command == "v":
         sell_crop(ACTIVE_CROP)
     elif command == "u" and shop_unlocked:
@@ -626,6 +689,9 @@ def handle_game_command(command):
 def handle_command(command):
     if command == "q":
         return False
+
+    if seed_shop_open:
+        return handle_seed_shop_command(command)
 
     if shop_open:
         return handle_shop_command(command)
