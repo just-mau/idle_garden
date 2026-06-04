@@ -8,6 +8,9 @@ import termios
 import time
 import tty
 
+import json
+import os
+
 
 # ============================================================
 # CONFIG / CONSTANTS
@@ -36,6 +39,49 @@ GARDEN_PANEL_WIDTH = 15
 
 SHOP_PANEL_WIDTH = 50
 SELL_AMOUNTS = [1, 5, 10, "all"]
+
+# ============================================================
+# save/load file
+# ===========================================================
+SAVE_FILE = "savegame.json"
+
+
+def save_game():
+    data = {
+        "gold": gold,
+        "inventory": inventory,
+        "stats": stats,
+        "gardens": gardens,
+        "garden_crops": garden_crops,
+        "active_garden": active_garden,
+        "shop_unlocked": shop_unlocked,
+        "harvest_all_unlocked": harvest_all_unlocked,
+        "upgrades": upgrades,
+    }
+
+    with open(SAVE_FILE, "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=2)
+
+
+def load_game():
+    global gold, inventory, stats, gardens, garden_crops
+    global active_garden, shop_unlocked, harvest_all_unlocked, upgrades
+
+    if not os.path.exists(SAVE_FILE):
+        return
+
+    with open(SAVE_FILE, "r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    gold = data.get("gold", gold)
+    inventory = data.get("inventory", inventory)
+    stats = data.get("stats", stats)
+    gardens = data.get("gardens", gardens)
+    garden_crops = data.get("garden_crops", garden_crops)
+    active_garden = data.get("active_garden", active_garden)
+    shop_unlocked = data.get("shop_unlocked", shop_unlocked)
+    harvest_all_unlocked = data.get("harvest_all_unlocked", harvest_all_unlocked)
+    upgrades = data.get("upgrades", upgrades)
 
 
 # ============================================================
@@ -1244,6 +1290,7 @@ def apply_dev_mode():
 
 
 def main():
+    load_game()
     old_terminal_settings = termios.tcgetattr(sys.stdin)
 
     try:
@@ -1264,6 +1311,7 @@ def main():
                 running = handle_command(command)
 
     finally:
+        save_game()
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_terminal_settings)
 
 

@@ -1,0 +1,105 @@
+{
+  "gold": 0,
+  "inventory": {
+    "wheat_seed": 0,
+    "wheat": 0,
+    "rye_seed": 0,
+    "rye": 0
+  },
+  "stats": {
+    "harvested": {
+      "wheat": 0,
+      "rye": 0
+    }
+  },
+  "gardens": [
+    [
+      [
+        {
+          "crop": "wheat",
+          "stage": ",",
+          "next_growth": 1780578097.190636
+        },
+        null,
+        {
+          "crop": "wheat",
+          "stage": ",",
+          "next_growth": 1780578097.353214
+        },
+        {
+          "crop": "wheat",
+          "stage": ",",
+          "next_growth": 1780578097.0331259
+        },
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        {
+          "crop": "wheat",
+          "stage": ",",
+          "next_growth": 1780578096.876118
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": ",",
+          "next_growth": 1780578096.726296
+        },
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    ]
+  ],
+  "garden_crops": [
+    "wheat"
+  ],
+  "active_garden": 0,
+  "shop_unlocked": false,
+  "harvest_all_unlocked": false,
+  "upgrades": [
+    {
+      "id": "saat_boy",
+      "name": "Saat-Boy",
+      "base_price": 10,
+      "base_interval": 5,
+      "level": 0,
+      "next_action": null
+    },
+    {
+      "id": "harvest_helper",
+      "name": "Erntehelfer",
+      "base_price": 20,
+      "base_interval": 5,
+      "level": 0,
+      "next_action": null
+    },
+    {
+      "id": "harvest_all",
+      "name": "Erntemaschine",
+      "base_price": 5000,
+      "level": 0,
+      "next_action": null
+    }
+  ]
+}
