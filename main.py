@@ -74,8 +74,27 @@ def load_game():
         data = json.load(file)
 
     gold = data.get("gold", gold)
-    inventory = data.get("inventory", inventory)
+
+    # Merge inventory instead of replacing so missing keys in save files
+    # don't lead to KeyError elsewhere in the code.
+    loaded_inventory = data.get("inventory")
+    if loaded_inventory is not None:
+        for k, v in loaded_inventory.items():
+            inventory[k] = v
+
+    # Ensure every crop has both seed and crop keys present in inventory
+    for crop_id in CROPS.keys():
+        inventory.setdefault(get_seed_key(crop_id), 0)
+        inventory.setdefault(crop_id, 0)
+
+    # Load stats and ensure harvested counters exist for all crops
     stats = data.get("stats", stats)
+    if "harvested" not in stats:
+        stats["harvested"] = {}
+
+    for crop_id in CROPS.keys():
+        stats["harvested"].setdefault(crop_id, 0)
+
     gardens = data.get("gardens", gardens)
     garden_crops = data.get("garden_crops", garden_crops)
     active_garden = data.get("active_garden", active_garden)
@@ -109,21 +128,49 @@ CROPS = {
         "unlock_crop": "wheat",
         "unlock_amount": 25,
     },
+    "hops": {
+        "name": "Hopfen",
+        "seed_name": "Hopfensaat",
+        "seed_price": 15,
+        "sell_price": 5,
+        "symbol": "H",
+        "growth_stage_1": 60,
+        "growth_stage_2": 60,
+        "unlock_crop": "rye",
+        "unlock_amount": 100,
+    },
+    "grape": {
+        "name": "Weintrauben",
+        "seed_name": "Weinreben",
+        "seed_price": 50,
+        "sell_price": 25,
+        "symbol": "G",
+        "growth_stage_1": 90,
+        "growth_stage_2": 90,
+        "unlock_crop": "hops",
+        "unlock_amount": 25,
+    },
 }
 
-CROP_ORDER = ["wheat", "rye"]
+CROP_ORDER = ["wheat", "rye", "hops", "grape"]
 
 inventory = {
     "wheat_seed": 5,
     "wheat": 0,
     "rye_seed": 0,
     "rye": 0,
+    "hops_seed": 0,
+    "hops": 0,
+    "grape_seed": 0,
+    "grape": 0
 }
 
 stats = {
     "harvested": {
         "wheat": 0,
         "rye": 0,
+        "hops": 0,
+        "grape": 0,
     }
 }
 

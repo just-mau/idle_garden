@@ -1,15 +1,15 @@
 {
-  "gold": 0,
+  "gold": 54602,
   "inventory": {
-    "wheat_seed": 0,
-    "wheat": 0,
-    "rye_seed": 0,
-    "rye": 0
+    "wheat_seed": 503,
+    "wheat": 963,
+    "rye_seed": 379,
+    "rye": 986
   },
   "stats": {
     "harvested": {
-      "wheat": 0,
-      "rye": 0
+      "wheat": 11204,
+      "rye": 10891
     }
   },
   "gardens": [
@@ -17,65 +17,1229 @@
       [
         {
           "crop": "wheat",
-          "stage": ",",
-          "next_growth": 1780578097.190636
-        },
-        null,
-        {
-          "crop": "wheat",
-          "stage": ",",
-          "next_growth": 1780578097.353214
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
         },
         {
           "crop": "wheat",
-          "stage": ",",
-          "next_growth": 1780578097.0331259
+          "stage": "Y",
+          "next_growth": 1780585872.0795891
         },
-        null
-      ],
-      [
-        null,
-        null,
-        null,
-        null,
-        null
-      ],
-      [
-        null,
-        null,
-        null,
-        null,
         {
           "crop": "wheat",
-          "stage": ",",
-          "next_growth": 1780578096.876118
+          "stage": "Y",
+          "next_growth": 1780585862.9064581
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
         }
       ],
       [
         {
           "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585878.36636
+        },
+        {
+          "crop": "wheat",
           "stage": ",",
-          "next_growth": 1780578096.726296
+          "next_growth": 1780586059.721384
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585873.101908
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585870.0389278
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585864.937737
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585875.140813
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585874.124747
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585869.024409
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585870.0389278
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585865.957788
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585874.124747
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585871.058862
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585877.651359
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585883.771061
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585878.6638458
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585872.551931
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585885.8034592
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585873.566976
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585874.5904388
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585864.378426
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585868.4604669
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585888.869219
+        },
+        {
+          "crop": "rye",
+          "stage": "i",
+          "next_growth": 1780586074.7212899
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585876.6337678
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585880.7040389
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585866.423294
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585888.869219
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585887.8492239
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585881.727058
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585864.378426
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585872.551931
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585883.771061
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585868.4604669
+        },
+        {
+          "crop": "rye",
+          "stage": ",",
+          "next_growth": 1780586074.721397
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585879.6820369
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585882.7520452
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585887.8492239
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585885.8034592
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585883.771061
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "crop": "wheat",
+          "stage": "i",
+          "next_growth": 1780586059.7212899
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585863.917879
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585864.937737
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585878.36636
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585865.957788
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585876.157384
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585868.007937
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585878.36636
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "i",
+          "next_growth": 1780586059.7212899
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": ",",
+          "next_growth": 1780586059.7213702
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585861.888862
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585871.058862
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585889.886107
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585885.8034592
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585884.785551
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585870.5028632
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585881.727058
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585866.423294
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585882.7520452
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585862.337991
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585891.9247518
+        },
+        {
+          "crop": "rye",
+          "stage": ",",
+          "next_growth": 1780586074.721411
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "i",
+          "next_growth": 1780586074.7212899
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585871.528609
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585873.566976
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585869.477301
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585875.614002
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "i",
+          "next_growth": 1780586074.7212899
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585877.651359
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585879.6820369
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585863.3639412
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585866.423294
         },
         null,
-        null,
-        null,
-        null
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585867.440925
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585876.6337678
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585875.614002
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585870.5028632
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585874.5904388
+        }
       ],
       [
         null,
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585880.7040389
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585873.101908
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585868.007937
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585872.0795891
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585871.058862
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585873.101908
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585875.140813
+        },
+        {
+          "crop": "wheat",
+          "stage": ",",
+          "next_growth": 1780586059.721356
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585878.36636
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585869.024409
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585871.058862
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585862.9064581
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585870.0389278
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
         null,
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585866.980233
+        }
+      ],
+      [
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585878.36636
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585866.980233
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        },
+        {
+          "crop": "wheat",
+          "stage": "Y",
+          "next_growth": 1780585916.4834502
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585872.551931
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585890.902133
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585891.9247518
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585877.651359
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585890.902133
+        },
         null,
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585879.6820369
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585878.6638458
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585862.337991
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585882.7520452
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585865.403899
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585889.886107
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585890.902133
+        }
+      ],
+      [
         null,
-        null
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585864.378426
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585888.869219
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585877.651359
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585893.36636
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585889.886107
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585886.822832
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585876.6337678
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585871.528609
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585874.5904388
+        }
+      ],
+      [
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585893.36636
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585870.5028632
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585931.4834502
+        },
+        {
+          "crop": "rye",
+          "stage": "Y",
+          "next_growth": 1780585865.403899
+        }
       ]
     ]
   ],
   "garden_crops": [
-    "wheat"
+    "wheat",
+    "rye",
+    "rye",
+    "wheat",
+    "rye",
+    "rye",
+    "wheat",
+    "rye",
+    "rye"
   ],
-  "active_garden": 0,
-  "shop_unlocked": false,
+  "active_garden": 8,
+  "shop_unlocked": true,
   "harvest_all_unlocked": false,
   "upgrades": [
     {
@@ -83,16 +1247,16 @@
       "name": "Saat-Boy",
       "base_price": 10,
       "base_interval": 5,
-      "level": 0,
-      "next_action": null
+      "level": 9,
+      "next_action": 1780586045.7213361
     },
     {
       "id": "harvest_helper",
       "name": "Erntehelfer",
       "base_price": 20,
       "base_interval": 5,
-      "level": 0,
-      "next_action": null
+      "level": 9,
+      "next_action": 1780586045.7213361
     },
     {
       "id": "harvest_all",
