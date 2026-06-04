@@ -6,6 +6,7 @@ import shutil
 import sys
 import termios
 import tty
+import argparse
 
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
@@ -34,6 +35,7 @@ seeds = 5
 gold = 0
 shop_unlocked = False
 shop_open = False
+harvest_all_unlocked = False
 selected_upgrade = 0
 upgrades = [
     {
@@ -52,6 +54,12 @@ upgrades = [
         "level": 0,
         "next_action": None,
     },
+    {
+        "id": "harvest_all",
+        "name": "Erntemaschine",
+        "base_price": 5000,
+        "level": 0,
+    }
 ]
 
 
@@ -115,12 +123,16 @@ def box_line(content=""):
 
 
 def get_upgrade_max_level(upgrade):
+    if upgrade["id"] == "harvest_all":
+        return 1
     speed_levels = upgrade["base_interval"] - MIN_UPGRADE_INTERVAL + 1
     power_levels = MAX_UPGRADE_ACTIONS - 1
     return speed_levels + power_levels
 
 
 def is_upgrade_maxed(upgrade):
+    if upgrade["id"] == "harvest_all":
+        return harvest_all_unlocked
     return upgrade["level"] >= get_upgrade_max_level(upgrade)
 
 
@@ -187,12 +199,14 @@ def build_upgrade_item_line(upgrade, is_active):
 
 
 def format_upgrade_description(upgrade):
+    if upgrade["id"] == "harvest_all":
+        return "h erntet alle reifen Pflanzen"
+
     interval = get_upgrade_interval(upgrade)
     action_count = get_upgrade_action_count(upgrade)
 
     if upgrade["id"] == "saat_boy":
-        action = "Samen" if action_count != 1 else "Samen"
-        return f"pflanzt alle {interval}s {action_count} {action}"
+        return f"pflanzt alle {interval}s {action_count} Samen"
 
     action = "Feld" if action_count == 1 else "Felder"
     return f"erntet alle {interval}s {action_count} {action}"
@@ -485,7 +499,8 @@ def handle_command(command):
     if command == "p":
         plant_seed()
     elif command == "h":
-        harvest()
+        # harvest()
+        harvest_one()
     elif command == "b":
         buy_seed()
     elif command == "u" and shop_unlocked:
@@ -493,6 +508,15 @@ def handle_command(command):
 
     return True
 
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Startet mit Debug-Ressourcen"
+    )
+    return parser.parse_args()
 
 def main():
     old_terminal_settings = termios.tcgetattr(sys.stdin)
@@ -518,4 +542,9 @@ def main():
 
 
 if __name__ == "__main__":
+    args = parse_arguments()
+    if args.dev:
+        gold = 1000
+        seeds = 100
+        shop_unlocked = True
     main()
