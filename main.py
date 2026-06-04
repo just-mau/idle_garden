@@ -15,6 +15,7 @@ CYAN = "\033[36m"
 RESET = "\033[0m"
 ANSI_ESCAPE = re.compile(r"\033\[[0-9;]*m")
 SEED_PRICE = 3
+WHEAT_SELL_PRICE = 2
 BONUS_HARVEST_CHANCE = 0.1
 UPGRADE_UNLOCK_GOLD = 10
 SAAT_BOY_INTERVAL = 5
@@ -31,7 +32,10 @@ garden = [
     [None, None, None, None, None],
 ]
 
-seeds = 5
+inventory = {
+    "wheat_seed": 5,
+    "wheat": 0,
+}
 gold = 0
 shop_unlocked = False
 shop_open = False
@@ -94,7 +98,7 @@ def format_garden_row(row):
 def build_garden_lines():
     lines = [
         "=== IDLE GARDEN ===",
-        f"Samen: {seeds} | Gold: {gold}",
+        f"Gold: {gold} | Weizensaat: {inventory['wheat_seed']} | Weizen: {inventory['wheat']}",
         "",
     ]
 
@@ -103,9 +107,10 @@ def build_garden_lines():
 
     lines.extend([
         "",
-        "[p] Samen pflanzen",
+        "[p] Weizen pflanzen",
         "[h] Ernten",
-        f"[b] Samen kaufen ({SEED_PRICE} Gold)",
+        f"[b] Weizensaat kaufen ({SEED_PRICE} Gold)",
+        f"[v] Weizen verkaufen ({WHEAT_SELL_PRICE} Gold)",
     ])
 
     if shop_unlocked:
@@ -206,7 +211,7 @@ def format_upgrade_description(upgrade):
     action_count = get_upgrade_action_count(upgrade)
 
     if upgrade["id"] == "saat_boy":
-        return f"pflanzt alle {interval}s {action_count} Samen"
+        return f"pflanzt alle {interval}s {action_count} Weizen"
 
     action = "Feld" if action_count == 1 else "Felder"
     return f"erntet alle {interval}s {action_count} {action}"
@@ -301,17 +306,16 @@ def find_ready_fields():
     return ready_fields
 
 
-def create_plant():
+def create_plant(crop):
     return {
+        "crop": crop,
         "stage": ",",
         "next_growth": time.time() + random.randint(3, 8)
     }
 
 
 def plant_seed():
-    global seeds
-
-    if seeds <= 0:
+    if inventory["wheat_seed"] <= 0:
         return
 
     empty_fields = find_empty_fields()
@@ -320,18 +324,28 @@ def plant_seed():
         return
 
     row, col = random.choice(empty_fields)
-    garden[row][col] = create_plant()
-    seeds -= 1
+    garden[row][col] = create_plant("wheat")
+    inventory["wheat_seed"] -= 1
 
 
 def buy_seed():
-    global gold, seeds
+    global gold
 
     if gold < SEED_PRICE:
         return
 
     gold -= SEED_PRICE
-    seeds += 1
+    inventory["wheat_seed"] += 1
+
+def sell_wheat():
+    global gold
+
+    if inventory["wheat"] <= 0:
+        return
+
+    inventory["wheat"] -= 1
+    gold += WHEAT_SELL_PRICE
+    update_shop_unlock()
 
 
 def buy_selected_upgrade():
@@ -365,32 +379,36 @@ def grow_plants():
 
 
 def calculate_harvest_reward():
-    gold_reward = 1
+    crop_reward = 1
     seed_reward = 1
 
     if random.random() < BONUS_HARVEST_CHANCE:
-        bonus_type = random.choice(["gold", "seeds"])
+        bonus_type = random.choice(["crop", "seeds"])
 
-        if bonus_type == "gold":
-            gold_reward += 1
+        if bonus_type == "crop":
+            crop_reward += 1
         else:
             seed_reward += 1
 
-    return gold_reward, seed_reward
+    return crop_reward, seed_reward
 
 
 def harvest_plant(row_index, col_index):
-    global gold, seeds
-
     cell = garden[row_index][col_index]
 
     if cell is None or cell["stage"] != "Y":
         return False
 
+    crop = cell["crop"]
+
     garden[row_index][col_index] = None
-    gold_reward, seed_reward = calculate_harvest_reward()
-    gold += gold_reward
-    seeds += seed_reward
+
+    crop_reward, seed_reward = calculate_harvest_reward()
+
+    if crop == "wheat":
+        inventory["wheat"] += crop_reward
+        inventory["wheat_seed"] += seed_reward
+
     update_shop_unlock()
 
     return True
@@ -503,6 +521,8 @@ def handle_command(command):
         harvest_one()
     elif command == "b":
         buy_seed()
+    elif command == "v":
+        sell_wheat()
     elif command == "u" and shop_unlocked:
         shop_open = True
 
@@ -545,6 +565,7 @@ if __name__ == "__main__":
     args = parse_arguments()
     if args.dev:
         gold = 1000
-        seeds = 100
+        inventory["wheat_seed"] = 100
+        inventory["wheat"] = 100
         shop_unlocked = True
     main()
