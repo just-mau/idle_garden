@@ -43,6 +43,7 @@ PROCESSOR_PANEL_WIDTH = GARDENS_PER_ROW * GARDEN_PANEL_WIDTH + (GARDENS_PER_ROW 
 PROCESSOR_BAR_WIDTH = 20
 
 SHOP_PANEL_WIDTH = 50
+SHOP_PAGE_SIZE = 5
 SELL_AMOUNTS = [1, 5, 10, "all"]
 
 # ============================================================
@@ -916,11 +917,67 @@ def build_manager_lines():
 
 
 # ============================================================
+# DISPLAY: SHOP PAGINATION
+# ============================================================
+
+def get_shop_page_count(item_count):
+    if item_count <= 0:
+        return 1
+
+    return (item_count + SHOP_PAGE_SIZE - 1) // SHOP_PAGE_SIZE
+
+
+def clamp_shop_selection(selected_index, item_count):
+    if item_count <= 0:
+        return 0
+
+    return selected_index % item_count
+
+
+def get_shop_page_bounds(selected_index, item_count):
+    if item_count <= 0:
+        return 0, 1, 0, 0
+
+    selected_index = clamp_shop_selection(selected_index, item_count)
+    current_page = selected_index // SHOP_PAGE_SIZE
+    total_pages = get_shop_page_count(item_count)
+    start = current_page * SHOP_PAGE_SIZE
+    end = min(start + SHOP_PAGE_SIZE, item_count)
+
+    return current_page, total_pages, start, end
+
+
+def get_shop_page_items(items, selected_index):
+    current_page, total_pages, start, end = get_shop_page_bounds(selected_index, len(items))
+    return items[start:end], current_page, total_pages, start
+
+
+def change_shop_page(selected_index, item_count, direction):
+    if item_count <= 0:
+        return 0
+
+    selected_index = clamp_shop_selection(selected_index, item_count)
+    current_page, total_pages, _, _ = get_shop_page_bounds(selected_index, item_count)
+    target_page = (current_page + direction) % total_pages
+    position_on_page = selected_index % SHOP_PAGE_SIZE
+    target_start = target_page * SHOP_PAGE_SIZE
+    target_end = min(target_start + SHOP_PAGE_SIZE, item_count)
+
+    return min(target_start + position_on_page, target_end - 1)
+
+
+def build_shop_page_line(selected_index, item_count):
+    current_page, total_pages, _, _ = get_shop_page_bounds(selected_index, item_count)
+    return box_line(f"Seite {current_page + 1}/{total_pages} | q/e: Seite wechseln")
+
+
+# ============================================================
 # DISPLAY: SEED SHOP
 # ============================================================
 
 def build_seed_shop_lines():
-    unlocked_crops = get_unlocked_crops()
+    active_seed = clamp_shop_selection(selected_seed, len(CROP_ORDER))
+    crop_ids, _, _, page_start = get_shop_page_items(CROP_ORDER, active_seed)
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
 
     lines = [
@@ -930,18 +987,33 @@ def build_seed_shop_lines():
         box_line("w/s: Auswahl"),
         box_line("Enter/Space: kaufen"),
         box_line("b: Fokus verlassen"),
+        build_shop_page_line(active_seed, len(CROP_ORDER)),
         border,
     ]
 
-    for index, crop_id in enumerate(unlocked_crops):
+    for offset, crop_id in enumerate(crop_ids):
+        index = page_start + offset
         crop = get_crop(crop_id)
-        is_active = index == selected_seed
+        is_active = index == active_seed
 
         selector = "> " if is_active else "  "
         name = selector + crop["seed_name"]
 
         if is_active:
             name = CYAN + name + RESET
+
+        if not is_crop_unlocked(crop_id):
+            required_crop = crop["unlock_crop"]
+            required_amount = crop["unlock_amount"]
+            required_name = get_crop(required_crop)["name"]
+            current = stats["harvested"][required_crop]
+            locked_text = RED + "gesperrt" + RESET
+            spacer = " " * max(1, SHOP_PANEL_WIDTH - 2 - visible_length(name) - visible_length(locked_text))
+
+            lines.append(box_line(name + spacer + locked_text))
+            lines.append(box_line(f"  braucht: {current}/{required_amount} {required_name}"))
+            lines.append(box_line())
+            continue
 
         price_text = f"{crop['seed_price']}g"
 
@@ -953,21 +1025,6 @@ def build_seed_shop_lines():
         lines.append(box_line(name + spacer + price_text))
         lines.append(box_line(f"  Besitz: {inventory[get_seed_key(crop_id)]}"))
         lines.append(box_line())
-
-    locked_crops = [crop_id for crop_id in CROP_ORDER if not is_crop_unlocked(crop_id)]
-
-    if locked_crops:
-        lines.append(border)
-        lines.append(box_line("Gesperrt"))
-
-        for crop_id in locked_crops:
-            crop = get_crop(crop_id)
-            required_crop = crop["unlock_crop"]
-            required_amount = crop["unlock_amount"]
-            required_name = get_crop(required_crop)["name"]
-            current = stats["harvested"][required_crop]
-
-            lines.append(box_line(f"{crop['seed_name']}: {current}/{required_amount} {required_name}"))
 
     lines.append(border)
 
@@ -990,6 +1047,8 @@ def get_selected_sell_amount():
 
 def build_sell_shop_lines():
     sellable_items = get_sellable_items()
+    active_sell_crop = clamp_shop_selection(selected_sell_crop, len(sellable_items))
+    page_items, _, _, page_start = get_shop_page_items(sellable_items, active_sell_crop)
     selected_amount = get_selected_sell_amount()
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
 
@@ -1013,12 +1072,14 @@ def build_sell_shop_lines():
         box_line("a/d: Menge"),
         box_line("Enter/Space: verkaufen"),
         box_line("v: Fokus verlassen"),
+        build_shop_page_line(active_sell_crop, len(sellable_items)),
         box_line("Menge: " + " ".join(amount_labels)),
         border,
     ]
 
-    for index, item_key in enumerate(sellable_items):
-        is_active = index == selected_sell_crop
+    for offset, item_key in enumerate(page_items):
+        index = page_start + offset
+        is_active = index == active_sell_crop
 
         selector = "> " if is_active else "  "
         name = selector + get_item_name(item_key)
@@ -1262,6 +1323,8 @@ def build_upgrade_item_line(upgrade, is_active):
 
 
 def build_upgrade_shop_lines():
+    active_upgrade = clamp_shop_selection(selected_upgrade, len(upgrades))
+    page_upgrades, _, _, page_start = get_shop_page_items(upgrades, active_upgrade)
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
 
     lines = [
@@ -1271,11 +1334,13 @@ def build_upgrade_shop_lines():
         box_line("w/s: Auswahl"),
         box_line("Enter/Space: kaufen"),
         box_line("u: Fokus verlassen"),
+        build_shop_page_line(active_upgrade, len(upgrades)),
         border,
     ]
 
-    for index, upgrade in enumerate(upgrades):
-        lines.append(build_upgrade_item_line(upgrade, shop_open and index == selected_upgrade))
+    for offset, upgrade in enumerate(page_upgrades):
+        index = page_start + offset
+        lines.append(build_upgrade_item_line(upgrade, shop_open and index == active_upgrade))
         lines.append(box_line("  " + format_upgrade_description(upgrade)))
         lines.append(box_line())
 
@@ -1626,10 +1691,16 @@ def handle_manager_command(command):
 def handle_upgrade_shop_command(command):
     global shop_open, selected_upgrade
 
+    selected_upgrade = clamp_shop_selection(selected_upgrade, len(upgrades))
+
     if command == "w":
         selected_upgrade = (selected_upgrade - 1) % len(upgrades)
     elif command == "s":
         selected_upgrade = (selected_upgrade + 1) % len(upgrades)
+    elif command == "q":
+        selected_upgrade = change_shop_page(selected_upgrade, len(upgrades), -1)
+    elif command == "e":
+        selected_upgrade = change_shop_page(selected_upgrade, len(upgrades), 1)
     elif command in ("enter", "space"):
         buy_selected_upgrade()
     elif command == "u":
@@ -1641,20 +1712,24 @@ def handle_upgrade_shop_command(command):
 def handle_seed_shop_command(command):
     global seed_shop_open, selected_seed
 
-    unlocked_crops = get_unlocked_crops()
+    crop_ids = CROP_ORDER
 
-    if not unlocked_crops:
+    if not crop_ids:
         seed_shop_open = False
         return True
 
-    selected_seed = selected_seed % len(unlocked_crops)
+    selected_seed = clamp_shop_selection(selected_seed, len(crop_ids))
 
     if command == "w":
-        selected_seed = (selected_seed - 1) % len(unlocked_crops)
+        selected_seed = (selected_seed - 1) % len(crop_ids)
     elif command == "s":
-        selected_seed = (selected_seed + 1) % len(unlocked_crops)
+        selected_seed = (selected_seed + 1) % len(crop_ids)
+    elif command == "q":
+        selected_seed = change_shop_page(selected_seed, len(crop_ids), -1)
+    elif command == "e":
+        selected_seed = change_shop_page(selected_seed, len(crop_ids), 1)
     elif command in ("enter", "space"):
-        crop_id = unlocked_crops[selected_seed]
+        crop_id = crop_ids[selected_seed]
         buy_seed(crop_id)
     elif command == "b":
         seed_shop_open = False
@@ -1671,12 +1746,16 @@ def handle_sell_shop_command(command):
         sell_shop_open = False
         return True
 
-    selected_sell_crop = selected_sell_crop % len(sellable_items)
+    selected_sell_crop = clamp_shop_selection(selected_sell_crop, len(sellable_items))
 
     if command == "w":
         selected_sell_crop = (selected_sell_crop - 1) % len(sellable_items)
     elif command == "s":
         selected_sell_crop = (selected_sell_crop + 1) % len(sellable_items)
+    elif command == "q":
+        selected_sell_crop = change_shop_page(selected_sell_crop, len(sellable_items), -1)
+    elif command == "e":
+        selected_sell_crop = change_shop_page(selected_sell_crop, len(sellable_items), 1)
     elif command == "a":
         selected_sell_amount = (selected_sell_amount - 1) % len(SELL_AMOUNTS)
     elif command == "d":
@@ -1737,7 +1816,7 @@ def handle_game_command(command):
 
 
 def handle_command(command):
-    if command == "q":
+    if command == "q" and not (seed_shop_open or sell_shop_open or shop_open):
         return False
 
     if manager_open:
