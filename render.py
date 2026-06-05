@@ -7,7 +7,7 @@ from data import *
 from terminal import *
 import state
 from items import *
-from garden import get_garden_crop
+from garden import get_garden_crop, get_new_garden_price
 from processors import *
 from upgrades import *
 
@@ -262,6 +262,7 @@ def build_garden_lines():
 
 def build_help_lines():
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
+    field_price = get_new_garden_price()
 
     lines = [
         border,
@@ -270,11 +271,18 @@ def build_help_lines():
         box_line("[p] Pflanzt im aktiven Feld"),
         box_line("[h] Erntet aktives Feld"),
         box_line("[f] Wechselt aktives Feld"),
-        box_line("[m] Feld-Manager"),
-        box_line("[n] Neues Feld kaufen"),
+        box_line("[m] Feld-Manager")
+    ]
+
+    if state.gold >= field_price and len(state.gardens) < MAX_GARDENS:
+        lines.append(box_line(f"[n] Neues Feld kaufen ({field_price}g)"))
+    else:
+        lines.append(box_line(f"[n] Neues Feld kaufen ({field_price}g, fehlt {field_price - state.gold}g)"))
+
+    lines.extend([
         box_line("[b] Saatgut-Shop"),
         box_line("[v] Verkaufsshop"),
-    ]
+    ])
 
     if state.shop_unlocked:
         lines.append(box_line("[u] Upgrade-Shop"))
