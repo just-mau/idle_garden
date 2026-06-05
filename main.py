@@ -38,9 +38,10 @@ MAX_UPGRADE_ACTIONS = 5
 GARDEN_SIZE = 5
 MAX_GARDENS = 9
 GARDENS_PER_ROW = 3
-GARDEN_PANEL_WIDTH = 15
+GARDEN_PANEL_WIDTH = 17
 PROCESSOR_PANEL_WIDTH = GARDENS_PER_ROW * GARDEN_PANEL_WIDTH + (GARDENS_PER_ROW - 1) * 2
-PROCESSOR_BAR_WIDTH = 20
+PROCESSOR_BAR_WIDTH = 10
+LAYOUT_COLUMN_GAP = 4
 
 SHOP_PANEL_WIDTH = 50
 SHOP_PAGE_SIZE = 5
@@ -168,6 +169,12 @@ PRODUCTS = {
 
 PRODUCT_ORDER = ["flour"]
 
+ITEM_NAMES = {
+    "yeast": "Hefe",
+}
+
+ITEM_ORDER = ["yeast"]
+
 PROCESSORS = {
     "mill": {
         "name": "Mühle",
@@ -199,10 +206,45 @@ PROCESSORS = {
             "amount": 15,
         },
         "duration": 300,
-    }
+    },
+    "yeast_farm": {
+        "name": "Hefefarm",
+        "base_price": 300,
+        "inputs": [
+            {
+                "item_key": "wheat",
+                "amount": 2,
+            },
+        ],
+        "output": {
+            "type": "item",
+            "item_key": "yeast",
+            "amount": 5,
+        },
+        "duration": 300,
+    },
+    "brewery": {
+        "name": "Brauerei",
+        "base_price": 500,
+        "inputs": [
+            {
+                "item_key": "hops",
+                "amount": 5,
+            },
+            {
+                "item_key": "yeast",
+                "amount": 5,
+            },
+        ],
+        "output": {
+            "type": "gold",
+            "amount": 50,
+        },
+        "duration": 600,
+    },
 }
 
-PROCESSOR_ORDER = ["mill", "bakery"]
+PROCESSOR_ORDER = ["mill", "bakery", "yeast_farm", "brewery"]
 
 inventory = {
     "wheat_seed": 5,
@@ -214,6 +256,7 @@ inventory = {
     "grape_seed": 0,
     "grape": 0,
     "flour": 0,
+    "yeast": 0,
 }
 
 stats = {
@@ -222,6 +265,8 @@ stats = {
         "rye": 0,
         "hops": 0,
         "grape": 0,
+        "flour": 0,
+        "yeast": 0,
     }
 }
 
@@ -266,6 +311,15 @@ def ensure_inventory_defaults():
     for product_id in PRODUCTS.keys():
         inventory.setdefault(product_id, 0)
 
+    for processor in PROCESSORS.values():
+        for input_item in get_processor_inputs(processor):
+            inventory.setdefault(input_item["item_key"], 0)
+
+        output = get_processor_output(processor)
+
+        if output.get("type") == "item":
+            inventory.setdefault(output["item_key"], 0)
+
 
 def ensure_stats_defaults():
     if "harvested" not in stats:
@@ -285,6 +339,9 @@ def get_item_name(item_key):
 
     if item_key in PRODUCTS:
         return get_product(item_key)["name"]
+
+    if item_key in ITEM_NAMES:
+        return ITEM_NAMES[item_key]
 
     return item_key
 
@@ -332,6 +389,26 @@ def is_product_visible(product_id):
             and get_processor_output(processor)["item_key"] == product_id
             and is_processor_unlocked(processor_id)
         ):
+            return True
+
+    return False
+
+
+def is_inventory_item_visible(item_key):
+    if inventory.get(item_key, 0) > 0:
+        return True
+
+    for processor_id, processor in PROCESSORS.items():
+        if not is_processor_unlocked(processor_id):
+            continue
+
+        for input_item in get_processor_inputs(processor):
+            if input_item["item_key"] == item_key:
+                return True
+
+        output = get_processor_output(processor)
+
+        if output.get("type") == "item" and output["item_key"] == item_key:
             return True
 
     return False
@@ -533,9 +610,67 @@ def pad_visible(text, width):
     return text + (" " * padding)
 
 
+def truncate_visible(text, width):
+    if width <= 0:
+        return ""
+
+    if visible_length(text) <= width:
+        return text
+
+    suffix = "..." if width >= 3 else "." * width
+    target_width = width - visible_length(suffix)
+    result = []
+    visible_chars = 0
+    index = 0
+
+    while index < len(text) and visible_chars < target_width:
+        match = ANSI_ESCAPE.match(text, index)
+
+        if match:
+            result.append(match.group(0))
+            index = match.end()
+            continue
+
+        result.append(text[index])
+        visible_chars += 1
+        index += 1
+
+    truncated = "".join(result) + suffix
+
+    if "\033[" in truncated and not truncated.endswith(RESET):
+        truncated += RESET
+
+    return truncated
+
+
+def fit_visible(text, width):
+    return pad_visible(truncate_visible(text, width), width)
+
+
 def box_line(content="", width=SHOP_PANEL_WIDTH):
     content_width = width - 2
-    return "|" + pad_visible(content, content_width) + "|"
+    return "|" + fit_visible(content, content_width) + "|"
+
+
+def box_split_line(left, right, width=SHOP_PANEL_WIDTH):
+    content_width = width - 2
+    right_width = visible_length(right)
+
+    if not right:
+        return box_line(left, width)
+
+    if right_width >= content_width:
+        return box_line(right, width)
+
+    left_width = content_width - right_width - 1
+    left = truncate_visible(left, left_width)
+    spacer = " " * (content_width - visible_length(left) - right_width)
+
+    return "|" + left + spacer + right + "|"
+
+
+def main_panel_line(content=""):
+    return fit_visible(content, PROCESSOR_PANEL_WIDTH)
 
 
 # ============================================================
@@ -601,6 +736,10 @@ def build_inventory_lines():
             product = get_product(product_id)
             lines.append(f"{product['name']}: {inventory[product_id]}")
 
+    for item_key in ITEM_ORDER:
+        if is_inventory_item_visible(item_key):
+            lines.append(f"{get_item_name(item_key)}: {inventory[item_key]}")
+
     return lines
 
 
@@ -619,6 +758,27 @@ def build_inventory_box_lines():
     lines.append(border)
 
     return lines
+
+
+def build_compact_inventory_box_lines():
+    border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
+    summary_parts = [
+        f"Gold {gold}",
+    ]
+
+    for product_id in PRODUCT_ORDER:
+        if is_product_visible(product_id):
+            summary_parts.append(f"{get_product(product_id)['name']} {inventory[product_id]}")
+
+    for item_key in ITEM_ORDER:
+        if is_inventory_item_visible(item_key):
+            summary_parts.append(f"{get_item_name(item_key)} {inventory[item_key]}")
+
+    return [
+        border,
+        box_line(" | ".join(summary_parts)),
+        border,
+    ]
 
 
 def format_unlock_hint():
@@ -799,21 +959,14 @@ def build_processor_lines():
 
     now = time.time()
 
-    for index, processor_id in enumerate(visible_processors):
+    for processor_id in visible_processors:
         processor = PROCESSORS[processor_id]
         progress = get_processor_progress(processor_id, now)
         percent = int(progress * 100)
         bar = format_progress_bar(progress)
-
-        lines.append(box_line(f"{processor['name']} {bar} {percent:3d}%", PROCESSOR_PANEL_WIDTH))
-
-        recipe = "  " + format_processor_recipe(processor)
+        recipe = f"{processor['name']} {bar} {percent:3d}% | {format_processor_recipe(processor)}"
         status = format_processor_status(processor_id, now)
-        spacer = " " * max(1, PROCESSOR_PANEL_WIDTH - 2 - visible_length(recipe) - visible_length(status))
-        lines.append(box_line(recipe + spacer + status, PROCESSOR_PANEL_WIDTH))
-
-        if index < len(visible_processors) - 1:
-            lines.append(box_line(width=PROCESSOR_PANEL_WIDTH))
+        lines.append(box_split_line(recipe, status, PROCESSOR_PANEL_WIDTH))
 
     lines.append(border)
     return lines
@@ -835,20 +988,16 @@ def build_garden_lines():
     active_crop = get_crop(get_garden_crop(active_garden))
 
     lines = [
-        "=== IDLE GARDEN ===",
+        main_panel_line(
+            f"IDLE GARDEN | Feld {active_garden + 1}/{len(gardens)} | Saatgut: {active_crop['seed_name']}"
+        ),
     ]
-
-    lines.extend([
-        f"Aktives Feld: {active_garden + 1}/{len(gardens)}",
-        f"Feld-Saatgut: {active_crop['seed_name']}",
-    ])
 
     unlock_hint = format_unlock_hint()
 
     if unlock_hint:
-        lines.append(unlock_hint)
+        lines.append(main_panel_line(unlock_hint))
 
-    lines.append("")
     lines.extend(build_garden_grid_lines())
 
     lines.append("")
@@ -1008,9 +1157,8 @@ def build_seed_shop_lines():
             required_name = get_crop(required_crop)["name"]
             current = stats["harvested"][required_crop]
             locked_text = RED + "gesperrt" + RESET
-            spacer = " " * max(1, SHOP_PANEL_WIDTH - 2 - visible_length(name) - visible_length(locked_text))
 
-            lines.append(box_line(name + spacer + locked_text))
+            lines.append(box_split_line(name, locked_text))
             lines.append(box_line(f"  braucht: {current}/{required_amount} {required_name}"))
             lines.append(box_line())
             continue
@@ -1020,9 +1168,7 @@ def build_seed_shop_lines():
         if gold < crop["seed_price"]:
             price_text = RED + f"{price_text} fehlt {crop['seed_price'] - gold}g" + RESET
 
-        spacer = " " * max(1, SHOP_PANEL_WIDTH - 2 - visible_length(name) - visible_length(price_text))
-
-        lines.append(box_line(name + spacer + price_text))
+        lines.append(box_split_line(name, price_text))
         lines.append(box_line(f"  Besitz: {inventory[get_seed_key(crop_id)]}"))
         lines.append(box_line())
 
@@ -1097,9 +1243,7 @@ def build_sell_shop_lines():
         if owned <= 0:
             price_text = RED + "nichts da" + RESET
 
-        spacer = " " * max(1, SHOP_PANEL_WIDTH - 2 - visible_length(name) - visible_length(price_text))
-
-        lines.append(box_line(name + spacer + price_text))
+        lines.append(box_split_line(name, price_text))
         lines.append(box_line(f"  Besitz: {owned} | Preis: {sell_price}g/Stk."))
         lines.append(box_line())
 
@@ -1317,9 +1461,8 @@ def build_upgrade_item_line(upgrade, is_active):
         name = CYAN + name + RESET
 
     price = format_upgrade_price(upgrade)
-    spacer = " " * max(1, SHOP_PANEL_WIDTH - 2 - visible_length(name) - visible_length(price))
 
-    return box_line(name + spacer + price)
+    return box_split_line(name, price)
 
 
 def build_upgrade_shop_lines():
@@ -1367,7 +1510,12 @@ def draw_garden():
     else:
         menu_lines = build_help_lines()
 
-    side_lines = build_inventory_box_lines()
+    focus_panel_open = manager_open or seed_shop_open or sell_shop_open or shop_open
+    side_lines = (
+        build_compact_inventory_box_lines()
+        if focus_panel_open
+        else build_inventory_box_lines()
+    )
 
     if menu_lines:
         side_lines.append("")
@@ -1375,15 +1523,22 @@ def draw_garden():
 
     terminal_width = shutil.get_terminal_size((80, 24)).columns
     garden_width = max((visible_length(line) for line in garden_lines), default=0)
+    side_width = max((visible_length(line) for line in side_lines), default=0)
 
-    if side_lines and terminal_width >= garden_width + SHOP_PANEL_WIDTH + 2:
+    if side_lines and terminal_width >= garden_width + side_width + LAYOUT_COLUMN_GAP:
         max_lines = max(len(garden_lines), len(side_lines))
 
         for index in range(max_lines):
             left = garden_lines[index] if index < len(garden_lines) else ""
             right = side_lines[index] if index < len(side_lines) else ""
-            spacing = max(2, terminal_width - SHOP_PANEL_WIDTH - visible_length(left))
-            print(left + (" " * spacing) + right)
+
+            if right:
+                spacer_width = terminal_width - garden_width - side_width
+                spacer_width = max(LAYOUT_COLUMN_GAP, spacer_width)
+
+                print(pad_visible(left, garden_width) + (" " * spacer_width) + right)
+            else:
+                print(left)
     else:
         for line in garden_lines:
             print(line)
