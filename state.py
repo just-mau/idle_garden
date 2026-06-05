@@ -164,3 +164,55 @@ def ensure_stats_defaults():
 
     for crop_id in CROPS.keys():
         stats["harvested"].setdefault(crop_id, 0)
+
+
+def merge_saved_upgrades(saved_upgrades):
+    if not isinstance(saved_upgrades, list):
+        return
+
+    saved_by_id = {
+        upgrade.get("id"): upgrade
+        for upgrade in saved_upgrades
+        if isinstance(upgrade, dict) and upgrade.get("id")
+    }
+
+    for upgrade in upgrades:
+        saved_upgrade = saved_by_id.get(upgrade["id"])
+
+        if saved_upgrade is None:
+            continue
+
+        if "level" in saved_upgrade:
+            upgrade["level"] = saved_upgrade["level"]
+
+        if "next_action" in saved_upgrade:
+            upgrade["next_action"] = saved_upgrade["next_action"]
+
+
+def merge_saved_processors(saved_processors):
+    if not isinstance(saved_processors, dict):
+        return
+
+    for processor_id, state in processors.items():
+        saved_state = saved_processors.get(processor_id)
+
+        if not isinstance(saved_state, dict):
+            continue
+
+        state["unlocked"] = bool(saved_state.get("unlocked", state["unlocked"]))
+        state["started_at"] = saved_state.get("started_at", state["started_at"])
+        state["finish_at"] = saved_state.get("finish_at", state["finish_at"])
+
+
+def sync_processors_with_upgrades():
+    for upgrade in upgrades:
+        if upgrade.get("type") != "processor":
+            continue
+
+        processor_id = upgrade["processor_id"]
+        processor = processors[processor_id]
+
+        if processor["unlocked"]:
+            upgrade["level"] = max(upgrade["level"], 1)
+        elif upgrade["level"] > 0:
+            processor["unlocked"] = True
