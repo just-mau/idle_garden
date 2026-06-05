@@ -2,6 +2,7 @@
 
 import random
 import time
+import state
 
 from config import (
     BONUS_HARVEST_CHANCE,
@@ -39,7 +40,8 @@ def set_garden_crop(garden_index, crop_id):
 
 
 def get_new_garden_price():
-    return 100 * len(gardens)
+    next_garden_number = len(state.gardens) + 1
+    return int(100 * (next_garden_number ** 2.4))
 
 
 def buy_new_garden():

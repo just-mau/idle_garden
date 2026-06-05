@@ -53,7 +53,7 @@ def get_upgrade_price(upgrade):
     if is_upgrade_maxed(upgrade):
         return None
 
-    return upgrade["base_price"] * (upgrade["level"] + 1)
+    return int(upgrade["base_price"] * (upgrade["level"] + 1) ** 2.25)
 
 
 def get_upgrade_interval(upgrade):
