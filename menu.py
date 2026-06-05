@@ -67,6 +67,7 @@ def draw_start_help():
 
 def run_start_menu(read_command):
     selected_index = 0
+    # if savegame exists, preselect index 1
 
     while True:
         draw_start_menu(selected_index)
