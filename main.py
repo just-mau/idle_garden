@@ -1,57 +1,22 @@
 import argparse
+import json
+import os
 import random
-import re
 import select
-import shutil
 import sys
 import termios
 import time
 import tty
 
-import json
-import os
+from config import *
+from data import *
+from terminal import *
+from state import *
 
 
 # ============================================================
-# CONFIG / CONSTANTS
+# SAVE / LOAD
 # ============================================================
-
-GREEN = "\033[32m"
-YELLOW = "\033[33m"
-RED = "\033[31m"
-CYAN = "\033[36m"
-RESET = "\033[0m"
-
-ANSI_ESCAPE = re.compile(r"\033\[[0-9;]*m")
-
-BONUS_HARVEST_CHANCE = 0.1
-UPGRADE_UNLOCK_GOLD = 10
-
-SAAT_BOY_INTERVAL = 5
-HARVEST_HELPER_INTERVAL = 5
-MILL_PRICE = 50
-MILL_DURATION = 60
-FLOUR_SELL_PRICE = 3
-MIN_UPGRADE_INTERVAL = 1
-MAX_UPGRADE_ACTIONS = 5
-
-GARDEN_SIZE = 5
-MAX_GARDENS = 9
-GARDENS_PER_ROW = 3
-GARDEN_PANEL_WIDTH = 17
-PROCESSOR_PANEL_WIDTH = GARDENS_PER_ROW * GARDEN_PANEL_WIDTH + (GARDENS_PER_ROW - 1) * 2
-PROCESSOR_BAR_WIDTH = 10
-LAYOUT_COLUMN_GAP = 4
-
-SHOP_PANEL_WIDTH = 50
-SHOP_PAGE_SIZE = 5
-SELL_AMOUNTS = [1, 5, 10, "all"]
-
-# ============================================================
-# save/load file
-# ===========================================================
-SAVE_FILE = "savegame.json"
-
 
 def save_game():
     data = {
@@ -72,8 +37,7 @@ def save_game():
 
 
 def load_game():
-    global gold, inventory, stats, gardens, garden_crops
-    global active_garden, shop_unlocked, harvest_all_unlocked, upgrades, processors
+    global gold, active_garden, shop_unlocked, harvest_all_unlocked
 
     ensure_inventory_defaults()
     ensure_stats_defaults()
@@ -86,192 +50,41 @@ def load_game():
 
     gold = data.get("gold", gold)
 
-    # Merge inventory instead of replacing so missing keys in save files
-    # don't lead to KeyError elsewhere in the code.
     loaded_inventory = data.get("inventory")
-    if loaded_inventory is not None:
-        for k, v in loaded_inventory.items():
-            inventory[k] = v
+    if isinstance(loaded_inventory, dict):
+        inventory.update(loaded_inventory)
 
     ensure_inventory_defaults()
 
-    # Load stats and ensure harvested counters exist for all crops
-    stats = data.get("stats", stats)
+    loaded_stats = data.get("stats")
+    if isinstance(loaded_stats, dict):
+        stats.clear()
+        stats.update(loaded_stats)
+
     ensure_stats_defaults()
 
-    gardens = data.get("gardens", gardens)
-    garden_crops = data.get("garden_crops", garden_crops)
+    loaded_gardens = data.get("gardens")
+    if isinstance(loaded_gardens, list):
+        gardens.clear()
+        gardens.extend(loaded_gardens)
+
+    loaded_garden_crops = data.get("garden_crops")
+    if isinstance(loaded_garden_crops, list):
+        garden_crops.clear()
+        garden_crops.extend(loaded_garden_crops)
+
     active_garden = data.get("active_garden", active_garden)
     shop_unlocked = data.get("shop_unlocked", shop_unlocked)
     harvest_all_unlocked = data.get("harvest_all_unlocked", harvest_all_unlocked)
+
     merge_saved_upgrades(data.get("upgrades"))
     merge_saved_processors(data.get("processors"))
     sync_processors_with_upgrades()
 
 
 # ============================================================
-# CROPS / INVENTORY / STATS
+# DATA HELPERS
 # ============================================================
-
-CROPS = {
-    "wheat": {
-        "name": "Weizen",
-        "seed_name": "Weizensaat",
-        "seed_price": 3,
-        "sell_price": 2,
-        "symbol": "W",
-        "growth_stage_1": 15,
-        "growth_stage_2": 15,
-    },
-    "rye": {
-        "name": "Roggen",
-        "seed_name": "Roggensaat",
-        "seed_price": 8,
-        "sell_price": 4,
-        "symbol": "R",
-        "growth_stage_1": 30,
-        "growth_stage_2": 30,
-        "unlock_crop": "wheat",
-        "unlock_amount": 25,
-    },
-    "hops": {
-        "name": "Hopfen",
-        "seed_name": "Hopfensaat",
-        "seed_price": 15,
-        "sell_price": 5,
-        "symbol": "H",
-        "growth_stage_1": 60,
-        "growth_stage_2": 60,
-        "unlock_crop": "rye",
-        "unlock_amount": 100,
-    },
-    "grape": {
-        "name": "Weintrauben",
-        "seed_name": "Weinreben",
-        "seed_price": 50,
-        "sell_price": 25,
-        "symbol": "G",
-        "growth_stage_1": 90,
-        "growth_stage_2": 90,
-        "unlock_crop": "hops",
-        "unlock_amount": 25,
-    },
-}
-
-CROP_ORDER = ["wheat", "rye", "hops", "grape"]
-
-PRODUCTS = {
-    "flour": {
-        "name": "Mehl",
-        "sell_price": FLOUR_SELL_PRICE,
-    },
-}
-
-PRODUCT_ORDER = ["flour"]
-
-ITEM_NAMES = {
-    "yeast": "Hefe",
-}
-
-ITEM_ORDER = ["yeast"]
-
-PROCESSORS = {
-    "mill": {
-        "name": "Mühle",
-        "base_price": MILL_PRICE,
-        "inputs": [
-            {
-                "item_key": "wheat",
-                "amount": 1,
-            },
-        ],
-        "output": {
-            "type": "item",
-            "item_key": "flour",
-            "amount": 2,
-        },
-        "duration": MILL_DURATION,
-    },
-    "bakery": {
-        "name": "Bäckerei",
-        "base_price": 200,
-        "inputs": [
-            {
-                "item_key": "flour",
-                "amount": 2,
-            },
-        ],
-        "output": {
-            "type": "gold",
-            "amount": 15,
-        },
-        "duration": 300,
-    },
-    "yeast_farm": {
-        "name": "Hefefarm",
-        "base_price": 300,
-        "inputs": [
-            {
-                "item_key": "wheat",
-                "amount": 2,
-            },
-        ],
-        "output": {
-            "type": "item",
-            "item_key": "yeast",
-            "amount": 5,
-        },
-        "duration": 300,
-    },
-    "brewery": {
-        "name": "Brauerei",
-        "base_price": 500,
-        "inputs": [
-            {
-                "item_key": "hops",
-                "amount": 5,
-            },
-            {
-                "item_key": "yeast",
-                "amount": 5,
-            },
-        ],
-        "output": {
-            "type": "gold",
-            "amount": 50,
-        },
-        "duration": 600,
-    },
-}
-
-PROCESSOR_ORDER = ["mill", "bakery", "yeast_farm", "brewery"]
-
-inventory = {
-    "wheat_seed": 5,
-    "wheat": 0,
-    "rye_seed": 0,
-    "rye": 0,
-    "hops_seed": 0,
-    "hops": 0,
-    "grape_seed": 0,
-    "grape": 0,
-    "flour": 0,
-    "yeast": 0,
-}
-
-stats = {
-    "harvested": {
-        "wheat": 0,
-        "rye": 0,
-        "hops": 0,
-        "grape": 0,
-        "flour": 0,
-        "yeast": 0,
-    }
-}
-
-gold = 0
-
 
 def get_crop(crop_id):
     return CROPS[crop_id]
@@ -296,37 +109,6 @@ def get_processor_output(processor):
 def is_processor_output_item(processor):
     output = get_processor_output(processor)
     return output.get("type", "item") == "item"
-
-
-def get_seed_key(crop_id):
-    return f"{crop_id}_seed"
-
-
-def ensure_inventory_defaults():
-    # Keep old savegames and freshly added crops/products from missing keys.
-    for crop_id in CROPS.keys():
-        inventory.setdefault(get_seed_key(crop_id), 0)
-        inventory.setdefault(crop_id, 0)
-
-    for product_id in PRODUCTS.keys():
-        inventory.setdefault(product_id, 0)
-
-    for processor in PROCESSORS.values():
-        for input_item in get_processor_inputs(processor):
-            inventory.setdefault(input_item["item_key"], 0)
-
-        output = get_processor_output(processor)
-
-        if output.get("type") == "item":
-            inventory.setdefault(output["item_key"], 0)
-
-
-def ensure_stats_defaults():
-    if "harvested" not in stats:
-        stats["harvested"] = {}
-
-    for crop_id in CROPS.keys():
-        stats["harvested"].setdefault(crop_id, 0)
 
 
 def get_item_name(item_key):
@@ -439,107 +221,8 @@ def get_next_crop_id(current_crop_id, direction):
 
 
 # ============================================================
-# GAME STATE: GARDENS
+# SAVE MERGE HELPERS
 # ============================================================
-
-def create_empty_garden():
-    return [
-        [None for _ in range(GARDEN_SIZE)]
-        for _ in range(GARDEN_SIZE)
-    ]
-
-
-gardens = [
-    create_empty_garden()
-]
-
-garden_crops = [
-    "wheat"
-]
-
-active_garden = 0
-
-seed_shop_open = False
-selected_seed = 0
-
-sell_shop_open = False
-selected_sell_crop = 0
-selected_sell_amount = 0
-
-manager_open = False
-selected_manager_garden = 0
-
-help_open = False
-
-shop_unlocked = False
-shop_open = False
-selected_upgrade = 0
-harvest_all_unlocked = False
-
-
-def create_processor_upgrade(processor_id):
-    processor = get_processor(processor_id)
-
-    return {
-        "id": processor_id,
-        "name": processor["name"],
-        "type": "processor",
-        "processor_id": processor_id,
-        "base_price": processor["base_price"],
-        "max_level": 1,
-        "level": 0,
-        "next_action": None,
-    }
-
-
-def create_processor_state():
-    return {
-        "unlocked": False,
-        "started_at": None,
-        "finish_at": None,
-    }
-
-
-upgrades = [
-    {
-        "id": "saat_boy",
-        "name": "Saat-Boy",
-        "type": "automation",
-        "base_price": 10,
-        "base_interval": SAAT_BOY_INTERVAL,
-        "level": 0,
-        "next_action": None,
-    },
-    {
-        "id": "harvest_helper",
-        "name": "Erntehelfer",
-        "type": "automation",
-        "base_price": 20,
-        "base_interval": HARVEST_HELPER_INTERVAL,
-        "level": 0,
-        "next_action": None,
-    },
-    {
-        "id": "harvest_all",
-        "name": "Erntemaschine",
-        "type": "command",
-        "base_price": 5000,
-        "max_level": 1,
-        "level": 0,
-        "next_action": None,
-    },
-]
-
-upgrades.extend(
-    create_processor_upgrade(processor_id)
-    for processor_id in PROCESSOR_ORDER
-)
-
-processors = {
-    processor_id: create_processor_state()
-    for processor_id in PROCESSOR_ORDER
-}
-
 
 def merge_saved_upgrades(saved_upgrades):
     if not isinstance(saved_upgrades, list):
@@ -591,86 +274,6 @@ def sync_processors_with_upgrades():
             upgrade["level"] = max(upgrade["level"], 1)
         elif upgrade["level"] > 0:
             processor["unlocked"] = True
-
-
-# ============================================================
-# TERMINAL HELPERS
-# ============================================================
-
-def clear_screen():
-    print("\033[H\033[J", end="")
-
-
-def visible_length(text):
-    return len(ANSI_ESCAPE.sub("", text))
-
-
-def pad_visible(text, width):
-    padding = max(0, width - visible_length(text))
-    return text + (" " * padding)
-
-
-def truncate_visible(text, width):
-    if width <= 0:
-        return ""
-
-    if visible_length(text) <= width:
-        return text
-
-    suffix = "..." if width >= 3 else "." * width
-    target_width = width - visible_length(suffix)
-    result = []
-    visible_chars = 0
-    index = 0
-
-    while index < len(text) and visible_chars < target_width:
-        match = ANSI_ESCAPE.match(text, index)
-
-        if match:
-            result.append(match.group(0))
-            index = match.end()
-            continue
-
-        result.append(text[index])
-        visible_chars += 1
-        index += 1
-
-    truncated = "".join(result) + suffix
-
-    if "\033[" in truncated and not truncated.endswith(RESET):
-        truncated += RESET
-
-    return truncated
-
-
-def fit_visible(text, width):
-    return pad_visible(truncate_visible(text, width), width)
-
-
-def box_line(content="", width=SHOP_PANEL_WIDTH):
-    content_width = width - 2
-    return "|" + fit_visible(content, content_width) + "|"
-
-
-def box_split_line(left, right, width=SHOP_PANEL_WIDTH):
-    content_width = width - 2
-    right_width = visible_length(right)
-
-    if not right:
-        return box_line(left, width)
-
-    if right_width >= content_width:
-        return box_line(right, width)
-
-    left_width = content_width - right_width - 1
-    left = truncate_visible(left, left_width)
-    spacer = " " * (content_width - visible_length(left) - right_width)
-
-    return "|" + left + spacer + right + "|"
-
-
-def main_panel_line(content=""):
-    return fit_visible(content, PROCESSOR_PANEL_WIDTH)
 
 
 # ============================================================
@@ -972,31 +575,20 @@ def build_processor_lines():
     return lines
 
 
-def format_new_garden_line():
-    if len(gardens) >= MAX_GARDENS:
-        return f"[n] Neues Feld kaufen: Maximum erreicht ({MAX_GARDENS})"
-
-    price = get_new_garden_price()
-
-    if gold < price:
-        return f"[n] Neues Feld kaufen ({price} Gold, fehlt {price - gold})"
-
-    return f"[n] Neues Feld kaufen ({price} Gold)"
-
-
 def build_garden_lines():
     active_crop = get_crop(get_garden_crop(active_garden))
 
     lines = [
-        main_panel_line(
-            f"IDLE GARDEN | Feld {active_garden + 1}/{len(gardens)} | Saatgut: {active_crop['seed_name']}"
+        fit_visible(
+            f"IDLE GARDEN | Feld {active_garden + 1}/{len(gardens)} | Saatgut: {active_crop['seed_name']}",
+            PROCESSOR_PANEL_WIDTH,
         ),
     ]
 
     unlock_hint = format_unlock_hint()
 
     if unlock_hint:
-        lines.append(main_panel_line(unlock_hint))
+        lines.append(fit_visible(unlock_hint, PROCESSOR_PANEL_WIDTH))
 
     lines.extend(build_garden_grid_lines())
 
@@ -1007,8 +599,9 @@ def build_garden_lines():
 
 
 # ============================================================
-# DISPLAY: HELP
-# ===========================================================
+# DISPLAY: HELP / MANAGER / SHOPS
+# ============================================================
+
 def build_help_lines():
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
 
@@ -1028,9 +621,6 @@ def build_help_lines():
         border,
     ]
 
-# ============================================================
-# DISPLAY: FIELD MANAGER
-# ============================================================
 
 def build_manager_lines():
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
@@ -1064,10 +654,6 @@ def build_manager_lines():
 
     return lines
 
-
-# ============================================================
-# DISPLAY: SHOP PAGINATION
-# ============================================================
 
 def get_shop_page_count(item_count):
     if item_count <= 0:
@@ -1119,10 +705,6 @@ def build_shop_page_line(selected_index, item_count):
     current_page, total_pages, _, _ = get_shop_page_bounds(selected_index, item_count)
     return box_line(f"Seite {current_page + 1}/{total_pages} | q/e: Seite wechseln")
 
-
-# ============================================================
-# DISPLAY: SEED SHOP
-# ============================================================
 
 def build_seed_shop_lines():
     active_seed = clamp_shop_selection(selected_seed, len(CROP_ORDER))
@@ -1177,13 +759,10 @@ def build_seed_shop_lines():
     return lines
 
 
-# ============================================================
-# DISPLAY: SELL SHOP
-# ============================================================
-
 def format_sell_amount_label(amount):
     if amount == "all":
         return "alle"
+
     return f"{amount}x"
 
 
@@ -1253,7 +832,7 @@ def build_sell_shop_lines():
 
 
 # ============================================================
-# UPGRADES
+# UPGRADES / PROCESSORS
 # ============================================================
 
 def update_shop_unlock():
@@ -1402,10 +981,6 @@ def run_processors():
             start_processor(processor_id, now)
 
 
-# ============================================================
-# DISPLAY: UPGRADE SHOP
-# ============================================================
-
 def format_upgrade_name(upgrade):
     name = upgrade["name"]
 
@@ -1493,7 +1068,7 @@ def build_upgrade_shop_lines():
 
 
 # ============================================================
-# DISPLAY: MAIN
+# DISPLAY MAIN
 # ============================================================
 
 def draw_garden():
@@ -1521,21 +1096,20 @@ def draw_garden():
         side_lines.append("")
         side_lines.extend(menu_lines)
 
-    terminal_width = shutil.get_terminal_size((80, 24)).columns
+    width = terminal_width()
     garden_width = max((visible_length(line) for line in garden_lines), default=0)
     side_width = max((visible_length(line) for line in side_lines), default=0)
 
-    if side_lines and terminal_width >= garden_width + side_width + LAYOUT_COLUMN_GAP:
+    if side_lines and width >= garden_width + side_width + LAYOUT_COLUMN_GAP:
         max_lines = max(len(garden_lines), len(side_lines))
+        spacer_width = width - garden_width - side_width
+        spacer_width = max(LAYOUT_COLUMN_GAP, spacer_width)
 
         for index in range(max_lines):
             left = garden_lines[index] if index < len(garden_lines) else ""
             right = side_lines[index] if index < len(side_lines) else ""
 
             if right:
-                spacer_width = terminal_width - garden_width - side_width
-                spacer_width = max(LAYOUT_COLUMN_GAP, spacer_width)
-
                 print(pad_visible(left, garden_width) + (" " * spacer_width) + right)
             else:
                 print(left)
@@ -1545,6 +1119,7 @@ def draw_garden():
 
         if side_lines:
             print()
+
             for line in side_lines:
                 print(line)
 
@@ -1553,7 +1128,7 @@ def draw_garden():
 
 
 # ============================================================
-# GARDEN: FIELD SEARCH
+# GARDEN FIELD SEARCH
 # ============================================================
 
 def find_empty_fields_in_garden(garden_index):
@@ -1602,7 +1177,7 @@ def find_ready_fields_anywhere():
 
 
 # ============================================================
-# GARDEN: PLANTING / GROWTH
+# GARDEN PLANTING / GROWTH
 # ============================================================
 
 def create_plant(crop_id):
@@ -1674,7 +1249,7 @@ def grow_plants():
 
 
 # ============================================================
-# GARDEN: BUY / SELL / HARVEST
+# GARDEN BUY / SELL / HARVEST
 # ============================================================
 
 def buy_seed(crop_id):
@@ -1706,10 +1281,6 @@ def sell_item(item_key, amount):
     gold += amount_to_sell * get_sell_price(item_key)
 
     update_shop_unlock()
-
-
-def sell_crop(crop_id, amount):
-    sell_item(crop_id, amount)
 
 
 def calculate_harvest_reward():
@@ -1819,7 +1390,7 @@ def read_command(timeout=0.25):
 
 
 # ============================================================
-# INPUT HANDLING: SHOPS / MANAGER
+# INPUT HANDLING
 # ============================================================
 
 def handle_manager_command(command):
@@ -1925,10 +1496,6 @@ def handle_sell_shop_command(command):
     return True
 
 
-# ============================================================
-# INPUT HANDLING: MAIN GAME
-# ============================================================
-
 def close_all_shops():
     global seed_shop_open, sell_shop_open, shop_open, manager_open, help_open
 
@@ -1940,7 +1507,7 @@ def close_all_shops():
 
 
 def handle_game_command(command):
-    global seed_shop_open, sell_shop_open, shop_open, manager_open, selected_manager_garden, help_open
+    global seed_shop_open, sell_shop_open, shop_open, manager_open, selected_manager_garden
 
     if command == "p":
         plant_seed_in_garden(get_garden_crop(active_garden), active_garden)
@@ -1976,9 +1543,9 @@ def handle_command(command):
 
     if manager_open:
         return handle_manager_command(command)
-    
+
     if help_open:
-        close_all_shops()  # help_open = False
+        close_all_shops()
         return True
 
     if seed_shop_open:
