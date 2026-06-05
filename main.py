@@ -29,6 +29,9 @@ UPGRADE_UNLOCK_GOLD = 10
 
 SAAT_BOY_INTERVAL = 5
 HARVEST_HELPER_INTERVAL = 5
+MILL_PRICE = 50
+MILL_DURATION = 60
+FLOUR_SELL_PRICE = 3
 MIN_UPGRADE_INTERVAL = 1
 MAX_UPGRADE_ACTIONS = 5
 
@@ -36,6 +39,8 @@ GARDEN_SIZE = 5
 MAX_GARDENS = 9
 GARDENS_PER_ROW = 3
 GARDEN_PANEL_WIDTH = 15
+PROCESSOR_PANEL_WIDTH = GARDENS_PER_ROW * GARDEN_PANEL_WIDTH + (GARDENS_PER_ROW - 1) * 2
+PROCESSOR_BAR_WIDTH = 20
 
 SHOP_PANEL_WIDTH = 50
 SELL_AMOUNTS = [1, 5, 10, "all"]
@@ -57,6 +62,7 @@ def save_game():
         "shop_unlocked": shop_unlocked,
         "harvest_all_unlocked": harvest_all_unlocked,
         "upgrades": upgrades,
+        "processors": processors,
     }
 
     with open(SAVE_FILE, "w", encoding="utf-8") as file:
@@ -65,7 +71,7 @@ def save_game():
 
 def load_game():
     global gold, inventory, stats, gardens, garden_crops
-    global active_garden, shop_unlocked, harvest_all_unlocked, upgrades
+    global active_garden, shop_unlocked, harvest_all_unlocked, upgrades, processors
 
     if not os.path.exists(SAVE_FILE):
         return
@@ -87,6 +93,9 @@ def load_game():
         inventory.setdefault(get_seed_key(crop_id), 0)
         inventory.setdefault(crop_id, 0)
 
+    for product_id in PRODUCTS.keys():
+        inventory.setdefault(product_id, 0)
+
     # Load stats and ensure harvested counters exist for all crops
     stats = data.get("stats", stats)
     if "harvested" not in stats:
@@ -100,7 +109,9 @@ def load_game():
     active_garden = data.get("active_garden", active_garden)
     shop_unlocked = data.get("shop_unlocked", shop_unlocked)
     harvest_all_unlocked = data.get("harvest_all_unlocked", harvest_all_unlocked)
-    upgrades = data.get("upgrades", upgrades)
+    merge_saved_upgrades(data.get("upgrades"))
+    merge_saved_processors(data.get("processors"))
+    sync_processors_with_upgrades()
 
 
 # ============================================================
@@ -154,6 +165,28 @@ CROPS = {
 
 CROP_ORDER = ["wheat", "rye", "hops", "grape"]
 
+PRODUCTS = {
+    "flour": {
+        "name": "Mehl",
+        "sell_price": FLOUR_SELL_PRICE,
+    },
+}
+
+PRODUCT_ORDER = ["flour"]
+
+PROCESSORS = {
+    "mill": {
+        "name": "Mühle",
+        "input_key": "wheat",
+        "input_amount": 1,
+        "output_key": "flour",
+        "output_amount": 2,
+        "duration": MILL_DURATION,
+    },
+}
+
+PROCESSOR_ORDER = ["mill"]
+
 inventory = {
     "wheat_seed": 5,
     "wheat": 0,
@@ -162,7 +195,8 @@ inventory = {
     "hops_seed": 0,
     "hops": 0,
     "grape_seed": 0,
-    "grape": 0
+    "grape": 0,
+    "flour": 0,
 }
 
 stats = {
@@ -181,8 +215,36 @@ def get_crop(crop_id):
     return CROPS[crop_id]
 
 
+def get_product(product_id):
+    return PRODUCTS[product_id]
+
+
 def get_seed_key(crop_id):
     return f"{crop_id}_seed"
+
+
+def get_item_name(item_key):
+    for crop_id, crop in CROPS.items():
+        if item_key == crop_id:
+            return crop["name"]
+
+        if item_key == get_seed_key(crop_id):
+            return crop["seed_name"]
+
+    if item_key in PRODUCTS:
+        return get_product(item_key)["name"]
+
+    return item_key
+
+
+def get_sell_price(item_key):
+    if item_key in CROPS:
+        return get_crop(item_key)["sell_price"]
+
+    if item_key in PRODUCTS:
+        return get_product(item_key)["sell_price"]
+
+    return 0
 
 
 def is_crop_unlocked(crop_id):
@@ -202,6 +264,31 @@ def get_unlocked_crops():
         crop_id for crop_id in CROP_ORDER
         if is_crop_unlocked(crop_id)
     ]
+
+
+def is_processor_unlocked(processor_id):
+    return processors[processor_id]["unlocked"]
+
+
+def is_product_visible(product_id):
+    if inventory.get(product_id, 0) > 0:
+        return True
+
+    for processor_id, processor in PROCESSORS.items():
+        if processor["output_key"] == product_id and is_processor_unlocked(processor_id):
+            return True
+
+    return False
+
+
+def get_sellable_items():
+    items = list(get_unlocked_crops())
+
+    for product_id in PRODUCT_ORDER:
+        if is_product_visible(product_id):
+            items.append(product_id)
+
+    return items
 
 
 def get_next_crop_id(current_crop_id, direction):
@@ -260,6 +347,7 @@ upgrades = [
     {
         "id": "saat_boy",
         "name": "Saat-Boy",
+        "type": "automation",
         "base_price": 10,
         "base_interval": SAAT_BOY_INTERVAL,
         "level": 0,
@@ -268,6 +356,7 @@ upgrades = [
     {
         "id": "harvest_helper",
         "name": "Erntehelfer",
+        "type": "automation",
         "base_price": 20,
         "base_interval": HARVEST_HELPER_INTERVAL,
         "level": 0,
@@ -276,11 +365,83 @@ upgrades = [
     {
         "id": "harvest_all",
         "name": "Erntemaschine",
+        "type": "command",
         "base_price": 5000,
+        "max_level": 1,
+        "level": 0,
+        "next_action": None,
+    },
+    {
+        "id": "mill",
+        "name": "Mühle",
+        "type": "processor",
+        "processor_id": "mill",
+        "base_price": MILL_PRICE,
+        "max_level": 1,
         "level": 0,
         "next_action": None,
     },
 ]
+
+processors = {
+    "mill": {
+        "unlocked": False,
+        "started_at": None,
+        "finish_at": None,
+    },
+}
+
+
+def merge_saved_upgrades(saved_upgrades):
+    if not isinstance(saved_upgrades, list):
+        return
+
+    saved_by_id = {
+        upgrade.get("id"): upgrade
+        for upgrade in saved_upgrades
+        if isinstance(upgrade, dict) and upgrade.get("id")
+    }
+
+    for upgrade in upgrades:
+        saved_upgrade = saved_by_id.get(upgrade["id"])
+
+        if saved_upgrade is None:
+            continue
+
+        if "level" in saved_upgrade:
+            upgrade["level"] = saved_upgrade["level"]
+
+        if "next_action" in saved_upgrade:
+            upgrade["next_action"] = saved_upgrade["next_action"]
+
+
+def merge_saved_processors(saved_processors):
+    if not isinstance(saved_processors, dict):
+        return
+
+    for processor_id, state in processors.items():
+        saved_state = saved_processors.get(processor_id)
+
+        if not isinstance(saved_state, dict):
+            continue
+
+        state["unlocked"] = bool(saved_state.get("unlocked", state["unlocked"]))
+        state["started_at"] = saved_state.get("started_at", state["started_at"])
+        state["finish_at"] = saved_state.get("finish_at", state["finish_at"])
+
+
+def sync_processors_with_upgrades():
+    for upgrade in upgrades:
+        if upgrade.get("type") != "processor":
+            continue
+
+        processor_id = upgrade["processor_id"]
+        processor = processors[processor_id]
+
+        if processor["unlocked"]:
+            upgrade["level"] = max(upgrade["level"], 1)
+        elif upgrade["level"] > 0:
+            processor["unlocked"] = True
 
 
 # ============================================================
@@ -300,8 +461,8 @@ def pad_visible(text, width):
     return text + (" " * padding)
 
 
-def box_line(content=""):
-    content_width = SHOP_PANEL_WIDTH - 2
+def box_line(content="", width=SHOP_PANEL_WIDTH):
+    content_width = width - 2
     return "|" + pad_visible(content, content_width) + "|"
 
 
@@ -362,6 +523,28 @@ def build_inventory_lines():
         crop_amount = inventory[crop_id]
 
         lines.append(f"{crop['seed_name']}: {seed_amount} | {crop['name']}: {crop_amount}")
+
+    for product_id in PRODUCT_ORDER:
+        if is_product_visible(product_id):
+            product = get_product(product_id)
+            lines.append(f"{product['name']}: {inventory[product_id]}")
+
+    return lines
+
+
+def build_inventory_box_lines():
+    border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
+
+    lines = [
+        border,
+        box_line("INVENTAR"),
+        border,
+    ]
+
+    for line in build_inventory_lines():
+        lines.append(box_line(line))
+
+    lines.append(border)
 
     return lines
 
@@ -438,6 +621,86 @@ def build_garden_grid_lines():
     return lines
 
 
+def get_processor_progress(processor_id, now=None):
+    if now is None:
+        now = time.time()
+
+    state = processors[processor_id]
+    started_at = state["started_at"]
+    finish_at = state["finish_at"]
+
+    if started_at is None or finish_at is None:
+        return 0
+
+    duration = finish_at - started_at
+
+    if duration <= 0:
+        return 1
+
+    return max(0, min(1, (now - started_at) / duration))
+
+
+def format_progress_bar(progress):
+    filled = int(progress * PROCESSOR_BAR_WIDTH)
+    empty = PROCESSOR_BAR_WIDTH - filled
+    return "[" + ("#" * filled) + ("-" * empty) + "]"
+
+
+def format_processor_status(processor_id, now):
+    processor = PROCESSORS[processor_id]
+    state = processors[processor_id]
+
+    if state["started_at"] is not None and state["finish_at"] is not None:
+        remaining = max(0, int(state["finish_at"] - now + 0.999))
+        return f"noch {remaining}s"
+
+    input_name = get_item_name(processor["input_key"])
+    return f"wartet auf {input_name}"
+
+
+def build_processor_lines():
+    border = "+" + ("-" * (PROCESSOR_PANEL_WIDTH - 2)) + "+"
+    lines = [
+        border,
+        box_line("VERWERTER", PROCESSOR_PANEL_WIDTH),
+        border,
+    ]
+
+    visible_processors = [
+        processor_id for processor_id in PROCESSOR_ORDER
+        if is_processor_unlocked(processor_id)
+    ]
+
+    if not visible_processors:
+        lines.append(box_line("Noch keine Verwerter gekauft.", PROCESSOR_PANEL_WIDTH))
+        lines.append(border)
+        return lines
+
+    now = time.time()
+
+    for index, processor_id in enumerate(visible_processors):
+        processor = PROCESSORS[processor_id]
+        progress = get_processor_progress(processor_id, now)
+        percent = int(progress * 100)
+        bar = format_progress_bar(progress)
+
+        lines.append(box_line(f"{processor['name']} {bar} {percent:3d}%", PROCESSOR_PANEL_WIDTH))
+
+        recipe = (
+            f"  {processor['input_amount']} {get_item_name(processor['input_key'])}"
+            f" -> {processor['output_amount']} {get_item_name(processor['output_key'])}"
+        )
+        status = format_processor_status(processor_id, now)
+        spacer = " " * max(1, PROCESSOR_PANEL_WIDTH - 2 - visible_length(recipe) - visible_length(status))
+        lines.append(box_line(recipe + spacer + status, PROCESSOR_PANEL_WIDTH))
+
+        if index < len(visible_processors) - 1:
+            lines.append(box_line(width=PROCESSOR_PANEL_WIDTH))
+
+    lines.append(border)
+    return lines
+
+
 def format_new_garden_line():
     if len(gardens) >= MAX_GARDENS:
         return f"[n] Neues Feld kaufen: Maximum erreicht ({MAX_GARDENS})"
@@ -457,8 +720,6 @@ def build_garden_lines():
         "=== IDLE GARDEN ===",
     ]
 
-    lines.extend(build_inventory_lines())
-
     lines.extend([
         f"Aktives Feld: {active_garden + 1}/{len(gardens)}",
         f"Feld-Saatgut: {active_crop['seed_name']}",
@@ -472,6 +733,8 @@ def build_garden_lines():
     lines.append("")
     lines.extend(build_garden_grid_lines())
 
+    lines.append("")
+    lines.extend(build_processor_lines())
 
     return lines
 
@@ -609,7 +872,7 @@ def get_selected_sell_amount():
 
 
 def build_sell_shop_lines():
-    unlocked_crops = get_unlocked_crops()
+    sellable_items = get_sellable_items()
     selected_amount = get_selected_sell_amount()
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
 
@@ -637,19 +900,19 @@ def build_sell_shop_lines():
         border,
     ]
 
-    for index, crop_id in enumerate(unlocked_crops):
-        crop = get_crop(crop_id)
+    for index, item_key in enumerate(sellable_items):
         is_active = index == selected_sell_crop
 
         selector = "> " if is_active else "  "
-        name = selector + crop["name"]
+        name = selector + get_item_name(item_key)
 
         if is_active:
             name = CYAN + name + RESET
 
-        owned = inventory[crop_id]
+        owned = inventory[item_key]
         amount_to_sell = owned if selected_amount == "all" else min(selected_amount, owned)
-        value = amount_to_sell * crop["sell_price"]
+        sell_price = get_sell_price(item_key)
+        value = amount_to_sell * sell_price
 
         price_text = f"{amount_to_sell} -> {value}g"
 
@@ -659,7 +922,7 @@ def build_sell_shop_lines():
         spacer = " " * max(1, SHOP_PANEL_WIDTH - 2 - visible_length(name) - visible_length(price_text))
 
         lines.append(box_line(name + spacer + price_text))
-        lines.append(box_line(f"  Besitz: {owned} | Preis: {crop['sell_price']}g/Stk."))
+        lines.append(box_line(f"  Besitz: {owned} | Preis: {sell_price}g/Stk."))
         lines.append(box_line())
 
     lines.append(border)
@@ -679,8 +942,8 @@ def update_shop_unlock():
 
 
 def get_upgrade_max_level(upgrade):
-    if upgrade["id"] == "harvest_all":
-        return 1
+    if "max_level" in upgrade:
+        return upgrade["max_level"]
 
     speed_levels = upgrade["base_interval"] - MIN_UPGRADE_INTERVAL + 1
     power_levels = MAX_UPGRADE_ACTIONS - 1
@@ -689,7 +952,7 @@ def get_upgrade_max_level(upgrade):
 
 def is_upgrade_maxed(upgrade):
     if upgrade["id"] == "harvest_all":
-        return harvest_all_unlocked
+        return harvest_all_unlocked or upgrade["level"] >= get_upgrade_max_level(upgrade)
 
     return upgrade["level"] >= get_upgrade_max_level(upgrade)
 
@@ -731,6 +994,10 @@ def buy_selected_upgrade():
         harvest_all_unlocked = True
         return
 
+    if upgrade.get("type") == "processor":
+        processors[upgrade["processor_id"]]["unlocked"] = True
+        return
+
     upgrade["next_action"] = time.time() + get_upgrade_interval(upgrade)
 
 
@@ -738,7 +1005,7 @@ def run_automation():
     now = time.time()
 
     for upgrade in upgrades:
-        if upgrade["id"] == "harvest_all":
+        if upgrade.get("type") != "automation":
             continue
 
         if upgrade["level"] <= 0:
@@ -760,6 +1027,49 @@ def run_automation():
         upgrade["next_action"] = now + get_upgrade_interval(upgrade)
 
 
+def complete_processor(processor_id):
+    processor = PROCESSORS[processor_id]
+    state = processors[processor_id]
+
+    inventory[processor["output_key"]] += processor["output_amount"]
+    state["started_at"] = None
+    state["finish_at"] = None
+
+
+def start_processor(processor_id, now):
+    processor = PROCESSORS[processor_id]
+    state = processors[processor_id]
+    input_key = processor["input_key"]
+    input_amount = processor["input_amount"]
+
+    if inventory[input_key] < input_amount:
+        return False
+
+    inventory[input_key] -= input_amount
+    state["started_at"] = now
+    state["finish_at"] = now + processor["duration"]
+    return True
+
+
+def run_processors():
+    now = time.time()
+
+    for processor_id in PROCESSOR_ORDER:
+        if not is_processor_unlocked(processor_id):
+            continue
+
+        state = processors[processor_id]
+
+        if state["started_at"] is not None and state["finish_at"] is not None:
+            if now < state["finish_at"]:
+                continue
+
+            complete_processor(processor_id)
+
+        if state["started_at"] is None and state["finish_at"] is None:
+            start_processor(processor_id, now)
+
+
 # ============================================================
 # DISPLAY: UPGRADE SHOP
 # ============================================================
@@ -768,6 +1078,9 @@ def format_upgrade_name(upgrade):
     name = upgrade["name"]
 
     if is_upgrade_maxed(upgrade):
+        if upgrade.get("type") == "processor":
+            return name + " " + GREEN + "gekauft" + RESET
+
         return name + " " + GREEN + "Lv. Max" + RESET
 
     if upgrade["level"] > 0:
@@ -793,6 +1106,14 @@ def format_upgrade_price(upgrade):
 def format_upgrade_description(upgrade):
     if upgrade["id"] == "harvest_all":
         return "h erntet alle reifen Pflanzen im aktiven Feld"
+
+    if upgrade.get("type") == "processor":
+        processor = PROCESSORS[upgrade["processor_id"]]
+        return (
+            f"{processor['input_amount']} {get_item_name(processor['input_key'])}"
+            f" -> {processor['output_amount']} {get_item_name(processor['output_key'])}"
+            f" in {processor['duration']}s"
+        )
 
     interval = get_upgrade_interval(upgrade)
     action_count = get_upgrade_action_count(upgrade)
@@ -848,33 +1169,40 @@ def draw_garden():
     garden_lines = build_garden_lines()
 
     if manager_open:
-        shop_lines = build_manager_lines()
+        menu_lines = build_manager_lines()
     elif seed_shop_open:
-        shop_lines = build_seed_shop_lines()
+        menu_lines = build_seed_shop_lines()
     elif sell_shop_open:
-        shop_lines = build_sell_shop_lines()
+        menu_lines = build_sell_shop_lines()
     elif shop_open:
-        shop_lines = build_upgrade_shop_lines()
+        menu_lines = build_upgrade_shop_lines()
     else:
-        shop_lines = build_help_lines()
+        menu_lines = build_help_lines()
+
+    side_lines = build_inventory_box_lines()
+
+    if menu_lines:
+        side_lines.append("")
+        side_lines.extend(menu_lines)
 
     terminal_width = shutil.get_terminal_size((80, 24)).columns
+    garden_width = max((visible_length(line) for line in garden_lines), default=0)
 
-    if shop_lines and terminal_width >= SHOP_PANEL_WIDTH + 34:
-        max_lines = max(len(garden_lines), len(shop_lines))
+    if side_lines and terminal_width >= garden_width + SHOP_PANEL_WIDTH + 2:
+        max_lines = max(len(garden_lines), len(side_lines))
 
         for index in range(max_lines):
             left = garden_lines[index] if index < len(garden_lines) else ""
-            right = shop_lines[index] if index < len(shop_lines) else ""
+            right = side_lines[index] if index < len(side_lines) else ""
             spacing = max(2, terminal_width - SHOP_PANEL_WIDTH - visible_length(left))
             print(left + (" " * spacing) + right)
     else:
         for line in garden_lines:
             print(line)
 
-        if shop_lines:
+        if side_lines:
             print()
-            for line in shop_lines:
+            for line in side_lines:
                 print(line)
 
     print()
@@ -1021,21 +1349,24 @@ def buy_seed(crop_id):
     inventory[get_seed_key(crop_id)] += 1
 
 
-def sell_crop(crop_id, amount):
+def sell_item(item_key, amount):
     global gold
 
-    crop = get_crop(crop_id)
-    owned = inventory[crop_id]
+    owned = inventory[item_key]
 
     if owned <= 0:
         return
 
     amount_to_sell = owned if amount == "all" else min(amount, owned)
 
-    inventory[crop_id] -= amount_to_sell
-    gold += amount_to_sell * crop["sell_price"]
+    inventory[item_key] -= amount_to_sell
+    gold += amount_to_sell * get_sell_price(item_key)
 
     update_shop_unlock()
+
+
+def sell_crop(crop_id, amount):
+    sell_item(crop_id, amount)
 
 
 def calculate_harvest_reward():
@@ -1211,26 +1542,26 @@ def handle_seed_shop_command(command):
 def handle_sell_shop_command(command):
     global sell_shop_open, selected_sell_crop, selected_sell_amount
 
-    unlocked_crops = get_unlocked_crops()
+    sellable_items = get_sellable_items()
 
-    if not unlocked_crops:
+    if not sellable_items:
         sell_shop_open = False
         return True
 
-    selected_sell_crop = selected_sell_crop % len(unlocked_crops)
+    selected_sell_crop = selected_sell_crop % len(sellable_items)
 
     if command == "w":
-        selected_sell_crop = (selected_sell_crop - 1) % len(unlocked_crops)
+        selected_sell_crop = (selected_sell_crop - 1) % len(sellable_items)
     elif command == "s":
-        selected_sell_crop = (selected_sell_crop + 1) % len(unlocked_crops)
+        selected_sell_crop = (selected_sell_crop + 1) % len(sellable_items)
     elif command == "a":
         selected_sell_amount = (selected_sell_amount - 1) % len(SELL_AMOUNTS)
     elif command == "d":
         selected_sell_amount = (selected_sell_amount + 1) % len(SELL_AMOUNTS)
     elif command in ("enter", "space"):
-        crop_id = unlocked_crops[selected_sell_crop]
+        item_key = sellable_items[selected_sell_crop]
         amount = get_selected_sell_amount()
-        sell_crop(crop_id, amount)
+        sell_item(item_key, amount)
     elif command == "v":
         sell_shop_open = False
 
@@ -1347,6 +1678,7 @@ def main():
         while running:
             grow_plants()
             run_automation()
+            run_processors()
             update_shop_unlock()
 
             clear_screen()
