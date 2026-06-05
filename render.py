@@ -263,7 +263,7 @@ def build_garden_lines():
 def build_help_lines():
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
 
-    return [
+    lines = [
         border,
         box_line("HILFE / BEFEHLE"),
         border,
@@ -274,10 +274,17 @@ def build_help_lines():
         box_line("[n] Neues Feld kaufen"),
         box_line("[b] Saatgut-Shop"),
         box_line("[v] Verkaufsshop"),
-        box_line("[u] Upgrade-Shop"),
+    ]
+
+    if state.shop_unlocked:
+        lines.append(box_line("[u] Upgrade-Shop"))
+
+    lines.extend([
         box_line("[q] Speichern und Beenden"),
         border,
-    ]
+    ])
+
+    return lines
 
 
 def build_manager_lines():
