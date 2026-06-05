@@ -73,6 +73,9 @@ def load_game():
     global gold, inventory, stats, gardens, garden_crops
     global active_garden, shop_unlocked, harvest_all_unlocked, upgrades, processors
 
+    ensure_inventory_defaults()
+    ensure_stats_defaults()
+
     if not os.path.exists(SAVE_FILE):
         return
 
@@ -88,21 +91,11 @@ def load_game():
         for k, v in loaded_inventory.items():
             inventory[k] = v
 
-    # Ensure every crop has both seed and crop keys present in inventory
-    for crop_id in CROPS.keys():
-        inventory.setdefault(get_seed_key(crop_id), 0)
-        inventory.setdefault(crop_id, 0)
-
-    for product_id in PRODUCTS.keys():
-        inventory.setdefault(product_id, 0)
+    ensure_inventory_defaults()
 
     # Load stats and ensure harvested counters exist for all crops
     stats = data.get("stats", stats)
-    if "harvested" not in stats:
-        stats["harvested"] = {}
-
-    for crop_id in CROPS.keys():
-        stats["harvested"].setdefault(crop_id, 0)
+    ensure_stats_defaults()
 
     gardens = data.get("gardens", gardens)
     garden_crops = data.get("garden_crops", garden_crops)
@@ -177,15 +170,38 @@ PRODUCT_ORDER = ["flour"]
 PROCESSORS = {
     "mill": {
         "name": "Mühle",
-        "input_key": "wheat",
-        "input_amount": 1,
-        "output_key": "flour",
-        "output_amount": 2,
+        "base_price": MILL_PRICE,
+        "inputs": [
+            {
+                "item_key": "wheat",
+                "amount": 1,
+            },
+        ],
+        "output": {
+            "type": "item",
+            "item_key": "flour",
+            "amount": 2,
+        },
         "duration": MILL_DURATION,
     },
+    "bakery": {
+        "name": "Bäckerei",
+        "base_price": 200,
+        "inputs": [
+            {
+                "item_key": "flour",
+                "amount": 2,
+            },
+        ],
+        "output": {
+            "type": "gold",
+            "amount": 15,
+        },
+        "duration": 300,
+    }
 }
 
-PROCESSOR_ORDER = ["mill"]
+PROCESSOR_ORDER = ["mill", "bakery"]
 
 inventory = {
     "wheat_seed": 5,
@@ -219,8 +235,43 @@ def get_product(product_id):
     return PRODUCTS[product_id]
 
 
+def get_processor(processor_id):
+    return PROCESSORS[processor_id]
+
+
+def get_processor_inputs(processor):
+    return processor["inputs"]
+
+
+def get_processor_output(processor):
+    return processor["output"]
+
+
+def is_processor_output_item(processor):
+    output = get_processor_output(processor)
+    return output.get("type", "item") == "item"
+
+
 def get_seed_key(crop_id):
     return f"{crop_id}_seed"
+
+
+def ensure_inventory_defaults():
+    # Keep old savegames and freshly added crops/products from missing keys.
+    for crop_id in CROPS.keys():
+        inventory.setdefault(get_seed_key(crop_id), 0)
+        inventory.setdefault(crop_id, 0)
+
+    for product_id in PRODUCTS.keys():
+        inventory.setdefault(product_id, 0)
+
+
+def ensure_stats_defaults():
+    if "harvested" not in stats:
+        stats["harvested"] = {}
+
+    for crop_id in CROPS.keys():
+        stats["harvested"].setdefault(crop_id, 0)
 
 
 def get_item_name(item_key):
@@ -275,7 +326,11 @@ def is_product_visible(product_id):
         return True
 
     for processor_id, processor in PROCESSORS.items():
-        if processor["output_key"] == product_id and is_processor_unlocked(processor_id):
+        if (
+            is_processor_output_item(processor)
+            and get_processor_output(processor)["item_key"] == product_id
+            and is_processor_unlocked(processor_id)
+        ):
             return True
 
     return False
@@ -343,6 +398,30 @@ shop_open = False
 selected_upgrade = 0
 harvest_all_unlocked = False
 
+
+def create_processor_upgrade(processor_id):
+    processor = get_processor(processor_id)
+
+    return {
+        "id": processor_id,
+        "name": processor["name"],
+        "type": "processor",
+        "processor_id": processor_id,
+        "base_price": processor["base_price"],
+        "max_level": 1,
+        "level": 0,
+        "next_action": None,
+    }
+
+
+def create_processor_state():
+    return {
+        "unlocked": False,
+        "started_at": None,
+        "finish_at": None,
+    }
+
+
 upgrades = [
     {
         "id": "saat_boy",
@@ -371,24 +450,16 @@ upgrades = [
         "level": 0,
         "next_action": None,
     },
-    {
-        "id": "mill",
-        "name": "Mühle",
-        "type": "processor",
-        "processor_id": "mill",
-        "base_price": MILL_PRICE,
-        "max_level": 1,
-        "level": 0,
-        "next_action": None,
-    },
 ]
 
+upgrades.extend(
+    create_processor_upgrade(processor_id)
+    for processor_id in PROCESSOR_ORDER
+)
+
 processors = {
-    "mill": {
-        "unlocked": False,
-        "started_at": None,
-        "finish_at": None,
-    },
+    processor_id: create_processor_state()
+    for processor_id in PROCESSOR_ORDER
 }
 
 
@@ -646,6 +717,47 @@ def format_progress_bar(progress):
     return "[" + ("#" * filled) + ("-" * empty) + "]"
 
 
+def format_item_stack(item_key, amount):
+    return f"{amount} {get_item_name(item_key)}"
+
+
+def format_processor_inputs(processor):
+    return " + ".join(
+        format_item_stack(input_item["item_key"], input_item["amount"])
+        for input_item in get_processor_inputs(processor)
+    )
+
+
+def format_processor_output(processor):
+    output = get_processor_output(processor)
+
+    if output.get("type") == "gold":
+        return f"{output['amount']} Gold"
+
+    return format_item_stack(output["item_key"], output["amount"])
+
+
+def format_processor_recipe(processor):
+    return f"{format_processor_inputs(processor)} -> {format_processor_output(processor)}"
+
+
+def get_missing_processor_inputs(processor):
+    missing_inputs = []
+
+    for input_item in get_processor_inputs(processor):
+        item_key = input_item["item_key"]
+        required_amount = input_item["amount"]
+        owned_amount = inventory.get(item_key, 0)
+
+        if owned_amount < required_amount:
+            missing_inputs.append({
+                "item_key": item_key,
+                "amount": required_amount - owned_amount,
+            })
+
+    return missing_inputs
+
+
 def format_processor_status(processor_id, now):
     processor = PROCESSORS[processor_id]
     state = processors[processor_id]
@@ -654,8 +766,16 @@ def format_processor_status(processor_id, now):
         remaining = max(0, int(state["finish_at"] - now + 0.999))
         return f"noch {remaining}s"
 
-    input_name = get_item_name(processor["input_key"])
-    return f"wartet auf {input_name}"
+    missing_inputs = get_missing_processor_inputs(processor)
+
+    if not missing_inputs:
+        return "bereit"
+
+    missing_text = " + ".join(
+        format_item_stack(input_item["item_key"], input_item["amount"])
+        for input_item in missing_inputs
+    )
+    return f"fehlt {missing_text}"
 
 
 def build_processor_lines():
@@ -686,10 +806,7 @@ def build_processor_lines():
 
         lines.append(box_line(f"{processor['name']} {bar} {percent:3d}%", PROCESSOR_PANEL_WIDTH))
 
-        recipe = (
-            f"  {processor['input_amount']} {get_item_name(processor['input_key'])}"
-            f" -> {processor['output_amount']} {get_item_name(processor['output_key'])}"
-        )
+        recipe = "  " + format_processor_recipe(processor)
         status = format_processor_status(processor_id, now)
         spacer = " " * max(1, PROCESSOR_PANEL_WIDTH - 2 - visible_length(recipe) - visible_length(status))
         lines.append(box_line(recipe + spacer + status, PROCESSOR_PANEL_WIDTH))
@@ -1028,10 +1145,20 @@ def run_automation():
 
 
 def complete_processor(processor_id):
+    global gold
+
     processor = PROCESSORS[processor_id]
     state = processors[processor_id]
+    output = get_processor_output(processor)
 
-    inventory[processor["output_key"]] += processor["output_amount"]
+    if output.get("type") == "gold":
+        gold += output["amount"]
+        update_shop_unlock()
+    else:
+        item_key = output["item_key"]
+        inventory.setdefault(item_key, 0)
+        inventory[item_key] += output["amount"]
+
     state["started_at"] = None
     state["finish_at"] = None
 
@@ -1039,13 +1166,13 @@ def complete_processor(processor_id):
 def start_processor(processor_id, now):
     processor = PROCESSORS[processor_id]
     state = processors[processor_id]
-    input_key = processor["input_key"]
-    input_amount = processor["input_amount"]
 
-    if inventory[input_key] < input_amount:
+    if get_missing_processor_inputs(processor):
         return False
 
-    inventory[input_key] -= input_amount
+    for input_item in get_processor_inputs(processor):
+        inventory[input_item["item_key"]] -= input_item["amount"]
+
     state["started_at"] = now
     state["finish_at"] = now + processor["duration"]
     return True
@@ -1109,11 +1236,7 @@ def format_upgrade_description(upgrade):
 
     if upgrade.get("type") == "processor":
         processor = PROCESSORS[upgrade["processor_id"]]
-        return (
-            f"{processor['input_amount']} {get_item_name(processor['input_key'])}"
-            f" -> {processor['output_amount']} {get_item_name(processor['output_key'])}"
-            f" in {processor['duration']}s"
-        )
+        return f"{format_processor_recipe(processor)} in {processor['duration']}s"
 
     interval = get_upgrade_interval(upgrade)
     action_count = get_upgrade_action_count(upgrade)
