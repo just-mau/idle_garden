@@ -175,7 +175,10 @@ def close_all_shops():
 
 def handle_game_command(command):
     if command == "p":
-        plant_seed_in_garden(get_garden_crop(state.active_garden), state.active_garden)
+        if state.plant_all_unlocked:
+            plant_all_in_garden(state.active_garden)
+        else:
+            plant_seed_in_garden(get_garden_crop(state.active_garden), state.active_garden)
     elif command == "h":
         if state.harvest_all_unlocked:
             harvest_all_in_garden(state.active_garden)
@@ -305,6 +308,7 @@ def reset_game_state():
     state.shop_unlocked = False
     state.shop_open = False
     state.selected_upgrade = 0
+    state.plant_all_unlocked = False
     state.harvest_all_unlocked = False
 
     state.upgrades.clear()
@@ -324,6 +328,15 @@ def reset_game_state():
             "type": "automation",
             "base_price": 20,
             "base_interval": HARVEST_HELPER_INTERVAL,
+            "level": 0,
+            "next_action": None,
+        },
+        {
+            "id": "plant_all",
+            "name": "Saatmaschine",
+            "type": "command",
+            "base_price": 5000,
+            "max_level": 1,
             "level": 0,
             "next_action": None,
         },
@@ -371,6 +384,7 @@ def main():
                 state.gold,
                 state.active_garden,
                 state.shop_unlocked,
+                state.plant_all_unlocked,
                 state.harvest_all_unlocked,
             ) = savegame.load_game(
                 state.gold,
@@ -380,6 +394,7 @@ def main():
                 state.garden_crops,
                 state.active_garden,
                 state.shop_unlocked,
+                state.plant_all_unlocked,
                 state.harvest_all_unlocked,
                 state.ensure_inventory_defaults,
                 state.ensure_stats_defaults,
@@ -413,6 +428,7 @@ def main():
             state.garden_crops,
             state.active_garden,
             state.shop_unlocked,
+            state.plant_all_unlocked,
             state.harvest_all_unlocked,
             state.upgrades,
             state.processors,
@@ -422,6 +438,7 @@ def main():
         state.gold,
         state.active_garden,
         state.shop_unlocked,
+        state.plant_all_unlocked,
         state.harvest_all_unlocked,
     ) = savegame.load_game(
         state.gold,
@@ -431,6 +448,7 @@ def main():
         state.garden_crops,
         state.active_garden,
         state.shop_unlocked,
+        state.plant_all_unlocked,
         state.harvest_all_unlocked,
         state.ensure_inventory_defaults,
         state.ensure_stats_defaults,
@@ -468,6 +486,7 @@ def main():
             state.garden_crops,
             state.active_garden,
             state.shop_unlocked,
+            state.plant_all_unlocked,
             state.harvest_all_unlocked,
             state.upgrades,
             state.processors,

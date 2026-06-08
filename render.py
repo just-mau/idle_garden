@@ -263,12 +263,13 @@ def build_garden_lines():
 def build_help_lines():
     border = "+" + ("-" * (SHOP_PANEL_WIDTH - 2)) + "+"
     field_price = get_new_garden_price()
+    plant_help = "[p] Bepflanzt das komplette Feld" if state.plant_all_unlocked else "[p] Pflanzt im aktiven Feld"
 
     lines = [
         border,
         box_line("HILFE / BEFEHLE"),
         border,
-        box_line("[p] Pflanzt im aktiven Feld"),
+        box_line(plant_help),
         box_line("[h] Erntet aktives Feld"),
         box_line("[f] Wechselt aktives Feld"),
         box_line("[m] Feld-Manager")

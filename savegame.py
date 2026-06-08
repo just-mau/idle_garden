@@ -14,6 +14,7 @@ def save_game(
     garden_crops,
     active_garden,
     shop_unlocked,
+    plant_all_unlocked,
     harvest_all_unlocked,
     upgrades,
     processors,
@@ -26,6 +27,7 @@ def save_game(
         "garden_crops": garden_crops,
         "active_garden": active_garden,
         "shop_unlocked": shop_unlocked,
+        "plant_all_unlocked": plant_all_unlocked,
         "harvest_all_unlocked": harvest_all_unlocked,
         "upgrades": upgrades,
         "processors": processors,
@@ -43,6 +45,7 @@ def load_game(
     garden_crops,
     active_garden,
     shop_unlocked,
+    plant_all_unlocked,
     harvest_all_unlocked,
     ensure_inventory_defaults,
     ensure_stats_defaults,
@@ -54,7 +57,7 @@ def load_game(
     ensure_stats_defaults()
 
     if not os.path.exists(SAVE_FILE):
-        return gold, active_garden, shop_unlocked, harvest_all_unlocked
+        return gold, active_garden, shop_unlocked, plant_all_unlocked, harvest_all_unlocked
 
     with open(SAVE_FILE, "r", encoding="utf-8") as file:
         data = json.load(file)
@@ -86,10 +89,11 @@ def load_game(
 
     active_garden = data.get("active_garden", active_garden)
     shop_unlocked = data.get("shop_unlocked", shop_unlocked)
+    plant_all_unlocked = data.get("plant_all_unlocked", plant_all_unlocked)
     harvest_all_unlocked = data.get("harvest_all_unlocked", harvest_all_unlocked)
 
     merge_saved_upgrades(data.get("upgrades"))
     merge_saved_processors(data.get("processors"))
     sync_processors_with_upgrades()
 
-    return gold, active_garden, shop_unlocked, harvest_all_unlocked
+    return gold, active_garden, shop_unlocked, plant_all_unlocked, harvest_all_unlocked

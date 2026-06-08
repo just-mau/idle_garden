@@ -97,6 +97,7 @@ help_open = False
 shop_unlocked = False
 shop_open = False
 selected_upgrade = 0
+plant_all_unlocked = False
 harvest_all_unlocked = False
 
 upgrades = [
@@ -115,6 +116,15 @@ upgrades = [
         "type": "automation",
         "base_price": 900,
         "base_interval": HARVEST_HELPER_INTERVAL,
+        "level": 0,
+        "next_action": None,
+    },
+    {
+        "id": "plant_all",
+        "name": "Saatmaschine",
+        "type": "command",
+        "base_price": 5000,
+        "max_level": 1,
         "level": 0,
         "next_action": None,
     },

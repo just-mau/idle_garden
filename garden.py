@@ -139,6 +139,22 @@ def plant_seed_in_garden(crop_id, garden_index):
     return True
 
 
+def plant_all_in_garden(garden_index):
+    crop_id = get_garden_crop(garden_index)
+    seed_key = get_seed_key(crop_id)
+    planted = 0
+
+    for selected_garden, row, col in find_empty_fields_in_garden(garden_index):
+        if inventory[seed_key] <= 0:
+            break
+
+        gardens[selected_garden][row][col] = create_plant(crop_id)
+        inventory[seed_key] -= 1
+        planted += 1
+
+    return planted > 0
+
+
 def plant_seed_anywhere_by_field_crop():
     empty_fields = find_empty_fields_anywhere_by_field_crop()
 

@@ -51,6 +51,7 @@ def draw_start_help():
     print(" " * 22 + "HILFE")
     print()
     print(" " * 22 + "[p] Pflanzt im aktiven Feld")
+    print(" " * 22 + "    Upgrade: alle freien Felder")
     print(" " * 22 + "[h] Erntet aktives Feld")
     print(" " * 22 + "[f] Wechselt aktives Feld")
     print(" " * 22 + "[m] Feld-Manager")

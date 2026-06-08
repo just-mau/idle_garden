@@ -43,6 +43,9 @@ def get_upgrade_max_level(upgrade):
 def is_upgrade_maxed(upgrade):
     import state
 
+    if upgrade["id"] == "plant_all":
+        return state.plant_all_unlocked or upgrade["level"] >= get_upgrade_max_level(upgrade)
+
     if upgrade["id"] == "harvest_all":
         return state.harvest_all_unlocked or upgrade["level"] >= get_upgrade_max_level(upgrade)
 
@@ -83,6 +86,10 @@ def buy_selected_upgrade(selected_upgrade):
 
     state.gold -= price
     upgrade["level"] += 1
+
+    if upgrade["id"] == "plant_all":
+        state.plant_all_unlocked = True
+        return
 
     if upgrade["id"] == "harvest_all":
         state.harvest_all_unlocked = True
@@ -156,6 +163,9 @@ def format_upgrade_price(upgrade):
 
 
 def format_upgrade_description(upgrade):
+    if upgrade["id"] == "plant_all":
+        return "p bepflanzt alle freien Felder im aktiven Feld"
+
     if upgrade["id"] == "harvest_all":
         return "h erntet alle reifen Pflanzen im aktiven Feld"
 
